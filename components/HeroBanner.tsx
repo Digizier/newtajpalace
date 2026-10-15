@@ -89,30 +89,32 @@ export default function HeroBannerSection() {
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
 
   return (
-    <div className="relative w-full min-h-[580px] sm:min-h-[640px] lg:min-h-[720px] bg-charcoal-deep flex flex-col justify-between overflow-hidden">
-      {/* Background Banner Slides */}
-      {loading ? (
-        <Shimmer className="absolute inset-0 w-full h-full" />
-      ) : (
-        banners.map((banner, index) => (
-          <div
-            key={banner.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
-            }`}
-          >
-            {/* Background Image with Responsive Sizing */}
-            <img
-              src={banner.image_url}
-              alt={banner.title}
-              className="w-full h-full object-cover object-center scale-105 transition-transform duration-10000"
-            />
-            {/* Dark & Gold Gradient Overlays */}
-            <div className="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-charcoal/70 to-charcoal/40" />
-            <div className="absolute inset-0 bg-radial-gradient from-transparent via-black/40 to-black/70" />
-          </div>
-        ))
-      )}
+    <div className="relative w-full bg-charcoal-deep flex flex-col justify-between">
+      {/* Background Banner Slides Container */}
+      <div className="absolute inset-0 overflow-hidden">
+        {loading ? (
+          <Shimmer className="absolute inset-0 w-full h-full" />
+        ) : (
+          banners.map((banner, index) => (
+            <div
+              key={banner.id}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+              }`}
+            >
+              {/* Background Image with Responsive Sizing */}
+              <img
+                src={banner.image_url}
+                alt={banner.title}
+                className="w-full h-full object-cover object-center scale-105 transition-transform duration-10000"
+              />
+              {/* Dark & Gold Gradient Overlays */}
+              <div className="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-charcoal/80 to-charcoal/50" />
+              <div className="absolute inset-0 bg-radial-gradient from-transparent via-black/40 to-black/75" />
+            </div>
+          ))
+        )}
+      </div>
 
       {/* Slide Navigation Buttons */}
       {banners.length > 1 && (
@@ -120,14 +122,14 @@ export default function HeroBannerSection() {
           <button
             onClick={prevSlide}
             aria-label="Previous Slide"
-            className="w-11 h-11 rounded-full bg-black/40 hover:bg-gold-500 hover:text-charcoal text-white flex items-center justify-center backdrop-blur-md transition-all pointer-events-auto"
+            className="w-11 h-11 rounded-full bg-black/50 hover:bg-gold-500 hover:text-charcoal text-white flex items-center justify-center backdrop-blur-md transition-all pointer-events-auto"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
           <button
             onClick={nextSlide}
             aria-label="Next Slide"
-            className="w-11 h-11 rounded-full bg-black/40 hover:bg-gold-500 hover:text-charcoal text-white flex items-center justify-center backdrop-blur-md transition-all pointer-events-auto"
+            className="w-11 h-11 rounded-full bg-black/50 hover:bg-gold-500 hover:text-charcoal text-white flex items-center justify-center backdrop-blur-md transition-all pointer-events-auto"
           >
             <ChevronRight className="w-6 h-6" />
           </button>
@@ -135,9 +137,9 @@ export default function HeroBannerSection() {
       )}
 
       {/* Main Content Area */}
-      <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 sm:pt-40 pb-16 flex-1 flex flex-col justify-center">
+      <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 sm:pt-40 pb-6 sm:pb-8 flex-1 flex flex-col justify-center">
         <div className="max-w-3xl space-y-4">
-          <div className="inline-flex items-center space-x-2 bg-black/40 backdrop-blur-md border border-gold-400/30 px-3.5 py-1.5 rounded-full text-gold-300 text-xs font-semibold tracking-wide">
+          <div className="inline-flex items-center space-x-2 bg-black/50 backdrop-blur-md border border-gold-400/30 px-3.5 py-1.5 rounded-full text-gold-300 text-xs font-semibold tracking-wide">
             <MapPin className="w-3.5 h-3.5 text-gold-400" />
             <span>Opposite City Bus Terminal, Bund Road, Lahore</span>
           </div>
@@ -170,9 +172,9 @@ export default function HeroBannerSection() {
         </div>
       </div>
 
-      {/* Booking Search Engine Widget */}
-      <div className="relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mb-10 sm:-mb-12 w-full">
-        <div className="bg-white rounded-3xl shadow-2xl p-4 sm:p-6 border border-neutral-100">
+      {/* Booking Search Engine Widget - Completely contained with zero background split */}
+      <div className="relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-16 w-full mt-4 sm:mt-6">
+        <div className="bg-white rounded-3xl shadow-2xl p-5 sm:p-7 border border-neutral-100">
           <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
             {/* Check-In */}
             <div className="flex flex-col space-y-1">

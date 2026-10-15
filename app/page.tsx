@@ -64,7 +64,7 @@ export default function HomePage() {
       <HeroBannerSection />
 
       {/* 2. Welcome & Proximity Advantage Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center space-x-2 bg-gold-100/80 text-gold-800 px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide border border-gold-300/40">

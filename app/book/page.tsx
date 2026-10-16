@@ -23,7 +23,8 @@ import {
   X,
   Video,
   Wrench,
-  Eye
+  Eye,
+  Upload
 } from 'lucide-react';
 import RoomDetailsModal from '@/components/RoomDetailsModal';
 import InvoiceSlip from '@/components/InvoiceSlip';
@@ -51,6 +52,27 @@ function BookingEngineContent() {
 
   // Wizard Phases: 1 to 6
   const [currentPhase, setCurrentPhase] = useState(1);
+
+  // Dedicated phase navigation helper with immediate scroll-to-top
+  const goToPhase = (phase: number) => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    setCurrentPhase(phase);
+  };
+
+  // Reliable scroll-to-top effect on every wizard phase transition
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }, 40);
+
+    return () => clearTimeout(timer);
+  }, [currentPhase]);
 
   // Data states
   const [rooms, setRooms] = useState<RoomCategory[]>([]);
@@ -268,7 +290,16 @@ function BookingEngineContent() {
   // Final Booking Submission (Phase 6)
   const handleConfirmReservation = async () => {
     if (!selectedRoom) return;
+
+    // Strict validation: Bank Transfer / Online Payment requires proof screenshot
+    if (paymentMethod === 'bank_transfer' && !transferProofFile) {
+      setBookingError('Payment Screenshot Required: You must attach your bank transfer receipt or mobile wallet transaction screenshot before completing the reservation.');
+      window.scrollTo({ top: 150, behavior: 'smooth' });
+      return;
+    }
+
     setSubmittingBooking(true);
+    setBookingError(null);
 
     try {
       // Build selected addons payload
@@ -335,7 +366,7 @@ function BookingEngineContent() {
       }
 
       setCreatedBooking(newBooking);
-      setCurrentPhase(6); // Move to final completed screen
+      goToPhase(6); // Move to final completed screen and scroll to top!
     } catch (err) {
       console.error('Failed to create booking:', err);
       setBookingError('There was an issue processing your booking request. Please try again or contact the front desk directly at +92 322 4845461.');
@@ -376,14 +407,21 @@ function BookingEngineContent() {
             { num: 4, label: 'Guest Details' },
             { num: 5, label: 'Confirmation' },
           ].map((st) => (
-            <div
+            <button
+              type="button"
               key={st.num}
-              className={`flex items-center space-x-2 text-xs font-bold whitespace-nowrap px-2 ${
+              onClick={() => {
+                if (currentPhase > st.num) {
+                  goToPhase(st.num);
+                }
+              }}
+              disabled={currentPhase < st.num}
+              className={`flex items-center space-x-2 text-xs font-bold whitespace-nowrap px-2 transition-all ${
                 currentPhase === st.num
                   ? 'text-gold-600 border-b-2 border-gold-600 pb-2 -mb-4'
                   : currentPhase > st.num
-                  ? 'text-neutral-900'
-                  : 'text-neutral-400'
+                  ? 'text-neutral-900 cursor-pointer hover:text-gold-600'
+                  : 'text-neutral-400 cursor-not-allowed opacity-60'
               }`}
             >
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] ${
@@ -396,7 +434,7 @@ function BookingEngineContent() {
                 {currentPhase > st.num ? '✓' : st.num}
               </div>
               <span className="hidden sm:inline">{st.label}</span>
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -823,7 +861,7 @@ function BookingEngineContent() {
               <div className="pt-4 flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setCurrentPhase(2)}
+                  onClick={() => goToPhase(2)}
                   disabled={!selectedRoom}
                   className="bg-gold-500 hover:bg-gold-600 disabled:opacity-40 text-white font-bold px-8 py-3.5 rounded-2xl text-sm flex items-center space-x-2 shadow-md active:scale-95 transition-all"
                 >
@@ -935,7 +973,7 @@ function BookingEngineContent() {
               <div className="pt-4 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setCurrentPhase(1)}
+                  onClick={() => goToPhase(1)}
                   className="px-6 py-3 rounded-xl border border-neutral-200 text-neutral-700 font-semibold text-xs flex items-center space-x-2 hover:bg-neutral-50"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -944,7 +982,7 @@ function BookingEngineContent() {
 
                 <button
                   type="button"
-                  onClick={() => setCurrentPhase(3)}
+                  onClick={() => goToPhase(3)}
                   className="bg-gold-500 hover:bg-gold-600 text-white font-bold px-8 py-3.5 rounded-2xl text-sm flex items-center space-x-2 shadow-md active:scale-95 transition-all"
                 >
                   <span>Review Cost & Discounts</span>
@@ -1036,7 +1074,7 @@ function BookingEngineContent() {
               <div className="pt-4 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setCurrentPhase(2)}
+                  onClick={() => goToPhase(2)}
                   className="px-6 py-3 rounded-xl border border-neutral-200 text-neutral-700 font-semibold text-xs flex items-center space-x-2 hover:bg-neutral-50"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -1045,7 +1083,7 @@ function BookingEngineContent() {
 
                 <button
                   type="button"
-                  onClick={() => setCurrentPhase(4)}
+                  onClick={() => goToPhase(4)}
                   className="bg-gold-500 hover:bg-gold-600 text-white font-bold px-8 py-3.5 rounded-2xl text-sm flex items-center space-x-2 shadow-md active:scale-95 transition-all"
                 >
                   <span>Enter Guest Information</span>
@@ -1166,7 +1204,7 @@ function BookingEngineContent() {
               <div className="pt-4 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setCurrentPhase(3)}
+                  onClick={() => goToPhase(3)}
                   className="px-6 py-3 rounded-xl border border-neutral-200 text-neutral-700 font-semibold text-xs flex items-center space-x-2 hover:bg-neutral-50"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -1198,7 +1236,7 @@ function BookingEngineContent() {
             cancelText="Make Changes"
             onConfirm={() => {
               setShowReviewModal(false);
-              setCurrentPhase(5);
+              goToPhase(5);
             }}
             onCancel={() => setShowReviewModal(false)}
           />
@@ -1294,17 +1332,95 @@ function BookingEngineContent() {
                         </div>
                       </div>
 
-                      <div className="pt-2">
-                        <label htmlFor="proof-receipt-file" className="block font-bold text-neutral-700 mb-1">
-                          Upload Payment Receipt / Screenshot (Optional)
-                        </label>
-                        <input
-                          id="proof-receipt-file"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setTransferProofFile(e.target.files?.[0] || null)}
-                          className="w-full text-xs text-neutral-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-gold-50 file:text-gold-700 hover:file:bg-gold-100"
-                        />
+                      <div className="pt-3 border-t border-neutral-200/80 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-1">
+                          <label htmlFor="proof-receipt-file" className="block font-bold text-neutral-900 text-xs">
+                            Upload Payment Receipt / Transfer Screenshot <span className="text-red-600 font-extrabold">* (Required)</span>
+                          </label>
+                          <span className="text-[10px] bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full font-bold">
+                            Mandatory for Online Payment
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-500">
+                          Please attach a screenshot or photo of the payment receipt from Meezan Bank, JazzCash, or EasyPaisa.
+                        </p>
+
+                        <div className={`p-4 rounded-2xl border-2 border-dashed transition-all ${
+                          transferProofFile
+                            ? 'border-emerald-500 bg-emerald-50/30'
+                            : 'border-gold-300 bg-white hover:border-gold-500'
+                        }`}>
+                          {transferProofFile ? (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3 min-w-0">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                                  <CheckCircle2 className="w-5 h-5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="text-xs font-bold text-neutral-900 block truncate">
+                                    {transferProofFile.name}
+                                  </span>
+                                  <span className="text-[10px] text-emerald-700 font-semibold block">
+                                    ✓ Screenshot Attached ({(transferProofFile.size / 1024).toFixed(0)} KB)
+                                  </span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setTransferProofFile(null)}
+                                className="text-xs text-red-500 hover:text-red-700 font-bold px-2.5 py-1 rounded-lg hover:bg-red-50 ml-2 transition-colors"
+                              >
+                                Change
+                              </button>
+                            </div>
+                          ) : (
+                            <label htmlFor="proof-receipt-file" className="cursor-pointer block text-center py-2">
+                              <div className="w-10 h-10 rounded-full bg-gold-50 text-gold-600 flex items-center justify-center mx-auto mb-2">
+                                <Upload className="w-5 h-5" />
+                              </div>
+                              <span className="text-xs font-bold text-gold-600 hover:text-gold-700 block">
+                                Click here to attach receipt screenshot
+                              </span>
+                              <span className="text-[10px] text-neutral-400 block mt-0.5">
+                                PNG, JPG, JPEG, WebP (Max 15MB)
+                              </span>
+                            </label>
+                          )}
+                          <input
+                            id="proof-receipt-file"
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              setTransferProofFile(file);
+                              if (file) setBookingError(null);
+                            }}
+                            className="hidden"
+                          />
+                        </div>
+
+                        {/* Optional Transaction Reference Input */}
+                        <div className="pt-1">
+                          <label htmlFor="txn-ref-input" className="block text-[11px] font-bold text-neutral-600 mb-1">
+                            Transaction Reference / TID (Optional)
+                          </label>
+                          <input
+                            id="txn-ref-input"
+                            type="text"
+                            placeholder="e.g. TID-98234821 or Bank Transfer Ref"
+                            value={transactionRef}
+                            onChange={(e) => setTransactionRef(e.target.value)}
+                            className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs font-mono text-neutral-800 placeholder-neutral-400 focus:outline-none focus:border-gold-500"
+                          />
+                        </div>
+
+                        {/* Screenshot Required Notification */}
+                        {!transferProofFile && (
+                          <div className="flex items-center space-x-2 text-[11px] text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">
+                            <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                            <span>Payment receipt screenshot is required before confirmation can proceed.</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1315,7 +1431,7 @@ function BookingEngineContent() {
               <div className="pt-4 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setCurrentPhase(4)}
+                  onClick={() => goToPhase(4)}
                   className="px-6 py-3 rounded-xl border border-neutral-200 text-neutral-700 font-semibold text-xs flex items-center space-x-2 hover:bg-neutral-50"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -1324,12 +1440,17 @@ function BookingEngineContent() {
 
                 <button
                   type="button"
-                  disabled={submittingBooking}
+                  disabled={submittingBooking || (paymentMethod === 'bank_transfer' && !transferProofFile)}
                   onClick={handleConfirmReservation}
-                  className="bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-white font-bold px-8 py-3.5 rounded-2xl text-sm flex items-center space-x-2 shadow-lg shadow-gold-500/20 active:scale-95 transition-all"
+                  className="bg-gold-500 hover:bg-gold-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-8 py-3.5 rounded-2xl text-sm flex items-center space-x-2 shadow-lg shadow-gold-500/20 active:scale-95 transition-all"
                 >
                   {submittingBooking ? (
                     <span>Processing Reservation...</span>
+                  ) : paymentMethod === 'bank_transfer' && !transferProofFile ? (
+                    <>
+                      <span>Upload Screenshot to Complete</span>
+                      <Upload className="w-4 h-4" />
+                    </>
                   ) : (
                     <>
                       <span>Complete Reservation</span>
@@ -1565,10 +1686,7 @@ function BookingEngineContent() {
             </div>
             <button
               type="button"
-              onClick={() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                setCurrentPhase(2);
-              }}
+              onClick={() => goToPhase(2)}
               className="bg-gold-500 hover:bg-gold-600 active:scale-95 text-neutral-950 font-bold px-5 sm:px-7 py-2.5 rounded-xl text-xs sm:text-sm flex items-center space-x-2 shadow-lg shrink-0 transition-all"
             >
               <span>Proceed to Meal Add-ons</span>
@@ -1586,8 +1704,7 @@ function BookingEngineContent() {
           onSelectAndProceed={(r) => {
             setSelectedRoom(r);
             setModalRoom(null);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            setCurrentPhase(2);
+            goToPhase(2);
           }}
         />
       )}

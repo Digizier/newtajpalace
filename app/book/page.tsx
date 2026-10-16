@@ -21,6 +21,7 @@ import {
   FileText,
   Printer
 } from 'lucide-react';
+import InvoiceSlip from '@/components/InvoiceSlip';
 import { 
   getAllAdminRoomCategories, 
   getActiveMealAddons, 
@@ -89,6 +90,7 @@ function BookingEngineContent() {
   const [transactionRef, setTransactionRef] = useState('');
   const [submittingBooking, setSubmittingBooking] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   // Load initial data from Supabase
   useEffect(() => {
@@ -262,7 +264,7 @@ function BookingEngineContent() {
       setCurrentPhase(6); // Move to final completed screen
     } catch (err) {
       console.error('Failed to create booking:', err);
-      alert('There was an issue submitting your booking. Please try again or call reception.');
+      setBookingError('There was an issue processing your booking request. Please try again or contact the front desk directly at +92 322 4845461.');
     } finally {
       setSubmittingBooking(false);
       setShowReviewModal(false);
@@ -271,8 +273,19 @@ function BookingEngineContent() {
 
   return (
     <div className="pt-28 sm:pt-36 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Booking Error Banner (No alert/localhost popup) */}
+      {bookingError && (
+        <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-center justify-between no-print">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <span>{bookingError}</span>
+          </div>
+          <button onClick={() => setBookingError(null)} className="text-red-500 hover:text-red-700 font-bold ml-4">✕</button>
+        </div>
+      )}
+
       {/* Step Indicator Header */}
-      <div className="mb-8">
+      <div className="mb-8 no-print">
         <span className="text-xs uppercase tracking-widest text-gold-600 font-bold block mb-1">
           Online Room Reservation Engine
         </span>
@@ -875,18 +888,37 @@ function BookingEngineContent() {
 
                   {paymentMethod === 'bank_transfer' && (
                     <div className="mt-4 pt-4 border-t border-neutral-200/80 space-y-3 bg-neutral-50 p-4 rounded-xl text-xs text-neutral-700">
-                      <div className="font-bold text-neutral-900">Official Hotel Accounts:</div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="bg-white p-3 rounded-lg border border-neutral-200">
-                          <span className="font-bold block text-neutral-900">{hotelSettings?.bank_name}</span>
-                          <span>Title: {hotelSettings?.bank_account_title}</span><br />
-                          <span>A/C: {hotelSettings?.bank_account_number}</span><br />
-                          <span className="text-[10px] text-neutral-500">IBAN: {hotelSettings?.bank_iban}</span>
+                      <div className="font-bold text-neutral-900">Official Hotel Payment Accounts:</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* 1. Official Bank Account */}
+                        <div className="bg-white p-3.5 rounded-xl border border-neutral-200 space-y-1.5 shadow-sm">
+                          <div className="flex items-center justify-between pb-1 border-b border-neutral-100">
+                            <span className="font-bold text-xs text-neutral-900">{hotelSettings?.bank_name || 'Bank Account'}</span>
+                            <span className="text-[10px] bg-neutral-100 text-neutral-700 px-1.5 py-0.5 rounded font-semibold">Bank</span>
+                          </div>
+                          <div><span className="text-neutral-500 text-[10px] block">Account Title:</span><span className="font-semibold text-neutral-900">{hotelSettings?.bank_account_title}</span></div>
+                          <div><span className="text-neutral-500 text-[10px] block">A/C Number:</span><span className="font-mono font-bold text-neutral-900">{hotelSettings?.bank_account_number}</span></div>
+                          <div><span className="text-neutral-500 text-[10px] block">IBAN:</span><span className="font-mono text-[10px] text-neutral-600 break-all">{hotelSettings?.bank_iban}</span></div>
                         </div>
-                        <div className="bg-white p-3 rounded-lg border border-neutral-200">
-                          <span className="font-bold block text-neutral-900">JazzCash & EasyPaisa</span>
-                          <span>Account: {hotelSettings?.jazzcash_number}</span><br />
-                          <span>Title: {hotelSettings?.jazzcash_title}</span>
+
+                        {/* 2. JazzCash Mobile Wallet */}
+                        <div className="bg-white p-3.5 rounded-xl border border-red-100 space-y-1.5 shadow-sm">
+                          <div className="flex items-center justify-between pb-1 border-b border-neutral-100">
+                            <span className="font-bold text-xs text-red-600">JazzCash</span>
+                            <span className="text-[10px] bg-red-50 text-red-700 px-1.5 py-0.5 rounded font-semibold">Wallet</span>
+                          </div>
+                          <div><span className="text-neutral-500 text-[10px] block">Account Title:</span><span className="font-semibold text-neutral-900">{hotelSettings?.jazzcash_title || hotelSettings?.hotel_name}</span></div>
+                          <div><span className="text-neutral-500 text-[10px] block">Account / Mobile:</span><span className="font-mono font-bold text-neutral-900">{hotelSettings?.jazzcash_number}</span></div>
+                        </div>
+
+                        {/* 3. EasyPaisa Mobile Wallet */}
+                        <div className="bg-white p-3.5 rounded-xl border border-emerald-100 space-y-1.5 shadow-sm">
+                          <div className="flex items-center justify-between pb-1 border-b border-neutral-100">
+                            <span className="font-bold text-xs text-emerald-600">EasyPaisa</span>
+                            <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-semibold">Wallet</span>
+                          </div>
+                          <div><span className="text-neutral-500 text-[10px] block">Account Title:</span><span className="font-semibold text-neutral-900">{hotelSettings?.easypaisa_title || hotelSettings?.hotel_name}</span></div>
+                          <div><span className="text-neutral-500 text-[10px] block">Account / Mobile:</span><span className="font-mono font-bold text-neutral-900">{hotelSettings?.easypaisa_number}</span></div>
                         </div>
                       </div>
 
@@ -941,12 +973,12 @@ function BookingEngineContent() {
           {/* PHASE 6: Reservation Completed & Printable Voucher View */}
           {/* ========================================================= */}
           {currentPhase === 6 && createdBooking && (
-            <div className="space-y-6 text-center py-6">
-              <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+            <div className="space-y-6 text-center py-4">
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm no-print">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
 
-              <div>
+              <div className="no-print">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">
                   Reservation Request Received
                 </span>
@@ -958,85 +990,32 @@ function BookingEngineContent() {
                 </p>
               </div>
 
-              {/* Printable Invoice Container (#printable-invoice) */}
-              <div id="printable-invoice" className="bg-white p-6 sm:p-8 rounded-2xl border border-neutral-200 text-left space-y-4 max-w-xl mx-auto shadow-sm">
-                <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
-                  <div>
-                    <h3 className="font-serif font-bold text-xl text-neutral-900">NEW TAJ PALACE HOTEL</h3>
-                    <p className="text-xs text-neutral-500">Opp City Bus Terminal, Bund Road, Lahore</p>
-                    <p className="text-xs text-neutral-500">Ph: +92 322 4845461</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs text-neutral-400 block">Booking Reference</span>
-                    <span className="font-mono font-bold text-sm text-neutral-900">{createdBooking.reference}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-xs text-neutral-700 py-2">
-                  <div>
-                    <span className="text-neutral-400 block">Guest Name</span>
-                    <span className="font-bold text-neutral-900">{createdBooking.guest_name}</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-400 block">Phone / WhatsApp</span>
-                    <span className="font-bold text-neutral-900">{createdBooking.guest_phone}</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-400 block">Check-In Date</span>
-                    <span className="font-bold text-neutral-900">{createdBooking.check_in} (02:00 PM)</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-400 block">Check-Out Date</span>
-                    <span className="font-bold text-neutral-900">{createdBooking.check_out} (12:00 PM)</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-400 block">Room Suite</span>
-                    <span className="font-bold text-neutral-900">{createdBooking.room_category_name}</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-400 block">Payment Method</span>
-                    <span className="font-bold text-neutral-900 uppercase">
-                      {createdBooking.payment_method === 'pay_at_hotel' ? 'Pay at Hotel' : 'Bank Transfer'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-neutral-200 flex justify-between items-baseline">
-                  <span className="font-bold text-sm text-neutral-800">Grand Total:</span>
-                  <span className="font-serif text-xl font-bold text-neutral-900">
-                    Rs. {createdBooking.grand_total.toLocaleString()}
-                  </span>
-                </div>
-
-                <div className="p-3 bg-neutral-50 rounded-xl text-[11px] text-neutral-500 space-y-1">
-                  <p>• Check-in time starts from 02:00 PM. Please present your valid original CNIC or Passport.</p>
-                  <p>• Location: Bund Road, Dholanwal near Rahber Travels (opp. City Bus Terminal).</p>
-                </div>
-              </div>
+              {/* Printable Invoice Slip Component */}
+              <InvoiceSlip booking={createdBooking} hotelSettings={hotelSettings} />
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2 no-print">
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="bg-charcoal hover:bg-neutral-800 text-white font-bold px-6 py-3 rounded-xl text-xs flex items-center space-x-2 shadow-sm"
+                  className="bg-charcoal hover:bg-neutral-800 text-white font-bold px-6 py-3 rounded-xl text-xs flex items-center space-x-2 shadow-sm active:scale-95 transition-all"
                 >
                   <Printer className="w-4 h-4" />
-                  <span>Print Booking Voucher</span>
+                  <span>Print Booking Slip</span>
                 </button>
 
                 <a
                   href={`https://wa.me/923224845461?text=${encodeURIComponent(`Hello New Taj Palace Hotel! I have submitted booking reference ${createdBooking.reference} for ${createdBooking.guest_name}.`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl text-xs flex items-center space-x-2 shadow-sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl text-xs flex items-center space-x-2 shadow-sm active:scale-95 transition-all"
                 >
                   <span>Notify Hotel on WhatsApp</span>
                 </a>
 
                 <Link
                   href="/"
-                  className="bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-semibold px-6 py-3 rounded-xl text-xs"
+                  className="bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-semibold px-6 py-3 rounded-xl text-xs transition-all"
                 >
                   Return to Home
                 </Link>
@@ -1048,7 +1027,7 @@ function BookingEngineContent() {
         {/* ========================================================= */}
         {/* Right Sticky Sidebar: Real-Time Summary Tracking */}
         {/* ========================================================= */}
-        <div className="lg:col-span-4 sticky top-28 bg-white rounded-3xl p-6 sm:p-7 border border-neutral-100 shadow-xl space-y-5">
+        <div className="lg:col-span-4 sticky top-28 bg-white rounded-3xl p-6 sm:p-7 border border-neutral-100 shadow-xl space-y-5 no-print">
           <div className="pb-4 border-b border-neutral-100">
             <span className="text-xs uppercase tracking-wider text-gold-600 font-bold block mb-1">
               Reservation Summary

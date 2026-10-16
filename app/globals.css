@@ -50,22 +50,57 @@
   animation: slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Printable PDF Invoice Styling */
+/* Printable PDF Hotel Voucher Slip Styling */
 @media print {
-  .no-print {
-    display: none !important;
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
   }
-  body {
+
+  html, body {
     background: #ffffff !important;
-    color: #000000 !important;
-  }
-  #printable-invoice {
-    display: block !important;
-    position: static !important;
-    width: 100% !important;
+    color: #111111 !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
     margin: 0 !important;
     padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide entire website UI, navigation, headers, footers, sidebars */
+  header, footer, nav, aside,
+  [data-mobile-navbar],
+  [data-floating-whatsapp],
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Hide everything inside body except printable invoice container */
+  body * {
+    visibility: hidden;
+  }
+
+  #printable-invoice,
+  #printable-invoice * {
+    visibility: visible !important;
+  }
+
+  #printable-invoice {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 16px 20px !important;
+    border: 1px solid #d4d4d4 !important;
     box-shadow: none !important;
-    border: none !important;
+    background: #ffffff !important;
+    color: #111111 !important;
+    border-radius: 8px !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
   }
 }

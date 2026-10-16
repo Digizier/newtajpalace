@@ -352,6 +352,46 @@ export async function updateBookingStatus(
   return data as Booking;
 }
 
+export async function updateBookingDetails(id: string, updates: Partial<Booking>): Promise<Booking> {
+  const payload = {
+    ...updates,
+    updated_at: new Date().toISOString(),
+  };
+  delete (payload as Record<string, unknown>).id;
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Booking;
+}
+
+export async function deleteBooking(id: string, reference?: string): Promise<void> {
+  if (reference) {
+    try {
+      await supabase.from('payment_proofs').delete().eq('booking_reference', reference);
+    } catch {
+      // ignore proof deletion failure
+    }
+  }
+  const { error } = await supabase.from('bookings').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteAllBookings(): Promise<void> {
+  try {
+    await supabase.from('payment_proofs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  } catch {
+    // ignore
+  }
+  const { error } = await supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) throw error;
+}
+
 // ==========================================
 // 6. HERO BANNERS & GALLERY
 // ==========================================

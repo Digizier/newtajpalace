@@ -26,11 +26,16 @@ import {
   X, 
   ChevronRight,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Building2
 } from 'lucide-react';
+import InvoiceSlip from '@/components/InvoiceSlip';
 import { 
   getAdminBookings, 
   updateBookingStatus, 
+  updateBookingDetails,
+  deleteBooking,
+  deleteAllBookings,
   getAllAdminRoomCategories, 
   saveRoomCategory, 
   deleteRoomCategory, 
@@ -107,6 +112,8 @@ export default function AdminPortalPage() {
   const [editMeal, setEditMeal] = useState<Partial<MealAddon> | null>(null);
   const [editBanner, setEditBanner] = useState<Partial<HeroBanner> | null>(null);
   const [editPromo, setEditPromo] = useState<Partial<PromoCode> | null>(null);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [printBooking, setPrintBooking] = useState<Booking | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
   // Show Toast
@@ -495,7 +502,7 @@ export default function AdminPortalPage() {
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-neutral-400 font-semibold">Status:</span>
                 <select
                   value={bookingFilter}
@@ -509,6 +516,35 @@ export default function AdminPortalPage() {
                   <option value="checked_out">Checked Out</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
+
+                {bookings.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteModal({
+                        isOpen: true,
+                        title: 'Delete All Reservations',
+                        message: 'Are you sure you want to permanently delete ALL reservations? This will clear all booking records directly from the database and cannot be undone.',
+                        onConfirm: async () => {
+                          try {
+                            await deleteAllBookings();
+                            showToast('All reservations have been cleared from database');
+                            setDeleteModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+                            reloadData();
+                          } catch (delAllErr) {
+                            console.error('Error clearing bookings:', delAllErr);
+                            showToast('Failed to delete all bookings. Please try again.');
+                          }
+                        }
+                      });
+                    }}
+                    className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold flex items-center space-x-1.5 transition-all"
+                    title="Delete All Reservations"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Clear All</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -574,14 +610,52 @@ export default function AdminPortalPage() {
                           <option value="rejected">Payment Rejected</option>
                         </select>
 
-                        <Link
-                          href={`/book/${b.reference}`}
-                          target="_blank"
-                          className="p-1.5 rounded-xl bg-neutral-800 text-neutral-300 hover:text-white"
-                          title="Print Official Invoice"
+                        {/* Edit Reservation Details (Prices, Extras, Notes) */}
+                        <button
+                          type="button"
+                          onClick={() => setEditingBooking(b)}
+                          className="p-1.5 rounded-xl bg-neutral-800 text-neutral-300 hover:text-gold-400 hover:bg-neutral-700 transition-all"
+                          title="Edit Reservation & Invoice Charges"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+
+                        {/* Print Official Invoice Slip */}
+                        <button
+                          type="button"
+                          onClick={() => setPrintBooking(b)}
+                          className="p-1.5 rounded-xl bg-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-700 transition-all"
+                          title="Print Official Slip"
                         >
                           <Printer className="w-4 h-4" />
-                        </Link>
+                        </button>
+
+                        {/* Delete Single Reservation */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteModal({
+                              isOpen: true,
+                              title: 'Delete Reservation',
+                              message: `Are you sure you want to permanently delete reservation ${b.reference} for ${b.guest_name}? This action will remove the record directly from the database and cannot be undone.`,
+                              onConfirm: async () => {
+                                try {
+                                  await deleteBooking(b.id, b.reference);
+                                  showToast(`Reservation ${b.reference} deleted successfully`);
+                                  setDeleteModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+                                  reloadData();
+                                } catch (delErr) {
+                                  console.error('Failed to delete booking:', delErr);
+                                  showToast('Failed to delete reservation. Please try again.');
+                                }
+                              }
+                            });
+                          }}
+                          className="p-1.5 rounded-xl bg-neutral-800 text-neutral-300 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                          title="Delete Reservation"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
 
@@ -1353,19 +1427,24 @@ export default function AdminPortalPage() {
             </div>
 
             {/* Bank Accounts Section */}
-            <div className="pt-4 border-t border-neutral-800 space-y-4">
-              <h4 className="font-bold text-gold-400 text-sm uppercase tracking-wider">
-                Official Bank & Mobile Wallet Accounts
-              </h4>
+            <div className="pt-6 border-t border-neutral-800 space-y-6">
+              <div>
+                <h4 className="font-bold text-gold-400 text-sm uppercase tracking-wider flex items-center space-x-2">
+                  <Building2 className="w-4 h-4 text-gold-400" />
+                  <span>1. Official Bank Account Details</span>
+                </h4>
+                <p className="text-xs text-neutral-400 mt-0.5">Customers transferring funds via banking apps will send to this account.</p>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">Bank Name</label>
                   <input
                     type="text"
-                    value={settings.bank_name}
+                    value={settings.bank_name || ''}
                     onChange={(e) => setSettings({ ...settings, bank_name: e.target.value })}
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                    placeholder="e.g. Meezan Bank"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white focus:border-gold-500"
                   />
                 </div>
 
@@ -1373,50 +1452,103 @@ export default function AdminPortalPage() {
                   <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">Bank Account Title</label>
                   <input
                     type="text"
-                    value={settings.bank_account_title}
+                    value={settings.bank_account_title || ''}
                     onChange={(e) => setSettings({ ...settings, bank_account_title: e.target.value })}
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                    placeholder="e.g. New Taj Palace Hotel"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white focus:border-gold-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">Account Number</label>
+                  <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">Bank Account Number</label>
                   <input
                     type="text"
-                    value={settings.bank_account_number}
+                    value={settings.bank_account_number || ''}
                     onChange={(e) => setSettings({ ...settings, bank_account_number: e.target.value })}
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                    placeholder="e.g. 02010108492019"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white focus:border-gold-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">IBAN</label>
+                  <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">IBAN Number</label>
                   <input
                     type="text"
-                    value={settings.bank_iban}
+                    value={settings.bank_iban || ''}
                     onChange={(e) => setSettings({ ...settings, bank_iban: e.target.value })}
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white font-mono"
+                    placeholder="e.g. PK45MEZN0002010108492019"
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white font-mono focus:border-gold-500"
                   />
                 </div>
+              </div>
 
+              {/* JazzCash Section */}
+              <div className="pt-4 border-t border-neutral-800/80 space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">JazzCash Account Number</label>
-                  <input
-                    type="text"
-                    value={settings.jazzcash_number}
-                    onChange={(e) => setSettings({ ...settings, jazzcash_number: e.target.value })}
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
-                  />
+                  <h4 className="font-bold text-red-500 text-sm uppercase tracking-wider flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                    <span>2. JazzCash Mobile Wallet Account</span>
+                  </h4>
+                  <p className="text-xs text-neutral-400 mt-0.5">Separate title and mobile account number displayed on checkout and invoice slips.</p>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">JazzCash Account Title</label>
+                    <input
+                      type="text"
+                      value={settings.jazzcash_title || ''}
+                      onChange={(e) => setSettings({ ...settings, jazzcash_title: e.target.value })}
+                      placeholder="e.g. New Taj Palace Hotel / Owner Name"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white focus:border-red-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">JazzCash Mobile / Account Number</label>
+                    <input
+                      type="text"
+                      value={settings.jazzcash_number || ''}
+                      onChange={(e) => setSettings({ ...settings, jazzcash_number: e.target.value })}
+                      placeholder="e.g. 03224845461"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white focus:border-red-500 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* EasyPaisa Section */}
+              <div className="pt-4 border-t border-neutral-800/80 space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">EasyPaisa Account Number</label>
-                  <input
-                    type="text"
-                    value={settings.easypaisa_number}
-                    onChange={(e) => setSettings({ ...settings, easypaisa_number: e.target.value })}
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
-                  />
+                  <h4 className="font-bold text-emerald-500 text-sm uppercase tracking-wider flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                    <span>3. EasyPaisa Mobile Wallet Account</span>
+                  </h4>
+                  <p className="text-xs text-neutral-400 mt-0.5">Separate title and mobile account number for EasyPaisa direct transfers.</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">EasyPaisa Account Title</label>
+                    <input
+                      type="text"
+                      value={settings.easypaisa_title || ''}
+                      onChange={(e) => setSettings({ ...settings, easypaisa_title: e.target.value })}
+                      placeholder="e.g. New Taj Palace Hotel / Owner Name"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-neutral-400 uppercase block mb-1">EasyPaisa Mobile / Account Number</label>
+                    <input
+                      type="text"
+                      value={settings.easypaisa_number || ''}
+                      onChange={(e) => setSettings({ ...settings, easypaisa_number: e.target.value })}
+                      placeholder="e.g. 03224845461"
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white focus:border-emerald-500 font-mono"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1460,6 +1592,393 @@ export default function AdminPortalPage() {
                 </div>
               ))
             )}
+          </div>
+        )}
+        {/* ========================================================= */}
+        {/* EDIT RESERVATION & INVOICE DETAILS MODAL */}
+        {/* ========================================================= */}
+        {editingBooking && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto no-print">
+            <div className="bg-neutral-900 border border-neutral-700 rounded-3xl p-6 sm:p-8 max-w-2xl w-full my-8 space-y-5 shadow-2xl">
+              <div className="flex justify-between items-center pb-3 border-b border-neutral-800">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gold-400 block">Edit Reservation & Billing</span>
+                  <h3 className="font-serif font-bold text-white text-lg sm:text-xl">
+                    Booking #{editingBooking.reference}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingBooking(null)}
+                  className="text-neutral-400 hover:text-white p-1 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 1. Guest Details */}
+                <div className="space-y-3 sm:col-span-2 bg-neutral-950 p-4 rounded-2xl border border-neutral-800">
+                  <span className="text-xs font-bold text-gold-400 uppercase tracking-wider block">1. Guest Details</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Guest Full Name</label>
+                      <input
+                        type="text"
+                        value={editingBooking.guest_name}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, guest_name: e.target.value })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Phone / WhatsApp</label>
+                      <input
+                        type="text"
+                        value={editingBooking.guest_phone}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, guest_phone: e.target.value })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        value={editingBooking.guest_email || ''}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, guest_email: e.target.value })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Stay & Room Suite Details */}
+                <div className="space-y-3 sm:col-span-2 bg-neutral-950 p-4 rounded-2xl border border-neutral-800">
+                  <span className="text-xs font-bold text-gold-400 uppercase tracking-wider block">2. Stay & Room Suite</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Room Category</label>
+                      <input
+                        type="text"
+                        value={editingBooking.room_category_name}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, room_category_name: e.target.value })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Check-In Date</label>
+                      <input
+                        type="date"
+                        value={editingBooking.check_in}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, check_in: e.target.value })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Check-Out Date</label>
+                      <input
+                        type="date"
+                        value={editingBooking.check_out}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, check_out: e.target.value })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Duration (Nights)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={editingBooking.nights}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, nights: Number(e.target.value) })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Adults Count</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={editingBooking.adults}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, adults: Number(e.target.value) })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Kids Count</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={editingBooking.children}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, children: Number(e.target.value) })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Payment Method</label>
+                      <select
+                        value={editingBooking.payment_method}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, payment_method: e.target.value as 'pay_at_hotel' | 'bank_transfer' })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white font-semibold"
+                      >
+                        <option value="pay_at_hotel">Pay at Hotel</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Financial Charges & Price Tuning */}
+                <div className="space-y-3 sm:col-span-2 bg-neutral-950 p-4 rounded-2xl border border-gold-500/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gold-400 uppercase tracking-wider block">
+                      3. Price Adjustment & Invoice Totals
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const computed = Math.max(0, 
+                          Number(editingBooking.room_total || 0) + 
+                          Number(editingBooking.addons_total || 0) + 
+                          Number(editingBooking.extra_charges || 0) - 
+                          Number(editingBooking.discount_total || 0)
+                        );
+                        setEditingBooking({ ...editingBooking, grand_total: computed });
+                      }}
+                      className="text-[11px] font-bold text-gold-400 hover:text-gold-300 underline"
+                    >
+                      Auto-Calculate Total
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Room Total (Rs.)</label>
+                      <input
+                        type="number"
+                        value={editingBooking.room_total}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setEditingBooking({
+                            ...editingBooking,
+                            room_total: val,
+                            grand_total: Math.max(0, val + Number(editingBooking.addons_total || 0) + Number(editingBooking.extra_charges || 0) - Number(editingBooking.discount_total || 0))
+                          });
+                        }}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Addons/Meals (Rs.)</label>
+                      <input
+                        type="number"
+                        value={editingBooking.addons_total}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setEditingBooking({
+                            ...editingBooking,
+                            addons_total: val,
+                            grand_total: Math.max(0, Number(editingBooking.room_total || 0) + val + Number(editingBooking.extra_charges || 0) - Number(editingBooking.discount_total || 0))
+                          });
+                        }}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-emerald-400 uppercase block mb-1">+ Extra Charges (Rs.)</label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={editingBooking.extra_charges || 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setEditingBooking({
+                            ...editingBooking,
+                            extra_charges: val,
+                            grand_total: Math.max(0, Number(editingBooking.room_total || 0) + Number(editingBooking.addons_total || 0) + val - Number(editingBooking.discount_total || 0))
+                          });
+                        }}
+                        className="w-full bg-neutral-900 border border-emerald-500/50 rounded-xl p-2.5 text-xs text-emerald-300 font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-red-400 uppercase block mb-1">- Discount/Minus (Rs.)</label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={editingBooking.discount_total || 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setEditingBooking({
+                            ...editingBooking,
+                            discount_total: val,
+                            grand_total: Math.max(0, Number(editingBooking.room_total || 0) + Number(editingBooking.addons_total || 0) + Number(editingBooking.extra_charges || 0) - val)
+                          });
+                        }}
+                        className="w-full bg-neutral-900 border border-red-500/50 rounded-xl p-2.5 text-xs text-red-300 font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-gold-400 uppercase block mb-1">= Grand Total (Rs.)</label>
+                      <input
+                        type="number"
+                        value={editingBooking.grand_total}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, grand_total: Number(e.target.value) })}
+                        className="w-full bg-neutral-900 border border-gold-500 rounded-xl p-2.5 text-xs text-gold-400 font-black"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Status and Notes */}
+                <div className="space-y-3 sm:col-span-2 bg-neutral-950 p-4 rounded-2xl border border-neutral-800">
+                  <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider block">4. Status & Invoice Notes</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Reservation Status</label>
+                      <select
+                        value={editingBooking.booking_status}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, booking_status: e.target.value as Booking['booking_status'] })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white font-semibold"
+                      >
+                        <option value="pending_review">Pending Review</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="checked_in">Checked In</option>
+                        <option value="checked_out">Checked Out</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">Payment Status</label>
+                      <select
+                        value={editingBooking.payment_status}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, payment_status: e.target.value as Booking['payment_status'] })}
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white font-semibold"
+                      >
+                        <option value="unpaid">Unpaid</option>
+                        <option value="under_review">Proof Under Review</option>
+                        <option value="verified">Verified / Paid</option>
+                        <option value="rejected">Payment Rejected</option>
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="text-[11px] font-bold text-neutral-400 block mb-1">
+                        Admin Notes & Remarks (Printed on Official Invoice Slip)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={editingBooking.admin_notes || ''}
+                        onChange={(e) => setEditingBooking({ ...editingBooking, admin_notes: e.target.value })}
+                        placeholder="e.g. Extra bed requested, early check-in approved, airport transfer booked"
+                        className="w-full bg-neutral-900 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-neutral-800 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingBooking(null)}
+                  className="px-5 py-2.5 rounded-xl border border-neutral-700 text-xs font-bold hover:bg-neutral-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await updateBookingDetails(editingBooking.id, {
+                        guest_name: editingBooking.guest_name,
+                        guest_phone: editingBooking.guest_phone,
+                        guest_email: editingBooking.guest_email,
+                        room_category_name: editingBooking.room_category_name,
+                        check_in: editingBooking.check_in,
+                        check_out: editingBooking.check_out,
+                        nights: Number(editingBooking.nights),
+                        adults: Number(editingBooking.adults),
+                        children: Number(editingBooking.children),
+                        room_total: Number(editingBooking.room_total),
+                        addons_total: Number(editingBooking.addons_total),
+                        extra_charges: Number(editingBooking.extra_charges || 0),
+                        discount_total: Number(editingBooking.discount_total || 0),
+                        grand_total: Number(editingBooking.grand_total),
+                        payment_method: editingBooking.payment_method,
+                        payment_status: editingBooking.payment_status,
+                        booking_status: editingBooking.booking_status,
+                        admin_notes: editingBooking.admin_notes || '',
+                      });
+                      showToast(`Reservation #${editingBooking.reference} updated successfully!`);
+                      setEditingBooking(null);
+                      reloadData();
+                    } catch (saveErr) {
+                      console.error('Failed to update booking:', saveErr);
+                      showToast('Failed to save changes. Please try again.');
+                    }
+                  }}
+                  className="px-6 py-2.5 rounded-xl bg-gold-500 hover:bg-gold-600 text-neutral-950 text-xs font-bold shadow-md transition-all active:scale-95"
+                >
+                  Save & Update Reservation
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* PRINT OFFICIAL INVOICE SLIP MODAL */}
+        {/* ========================================================= */}
+        {printBooking && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-neutral-900 border border-neutral-700 rounded-3xl p-6 sm:p-8 max-w-3xl w-full my-8 space-y-5 shadow-2xl">
+              <div className="flex justify-between items-center pb-3 border-b border-neutral-800 no-print">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gold-400 block">Print Official Slip</span>
+                  <h3 className="font-serif font-bold text-white text-lg sm:text-xl">
+                    Reservation Voucher #{printBooking.reference}
+                  </h3>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="bg-gold-500 hover:bg-gold-600 text-neutral-950 font-bold px-5 py-2.5 rounded-xl text-xs flex items-center space-x-1.5 shadow-md active:scale-95 transition-all"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print Slip Now</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintBooking(null)}
+                    className="text-neutral-400 hover:text-white p-2 rounded-xl border border-neutral-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* The isolated Printable Slip */}
+              <div className="max-h-[75vh] overflow-y-auto p-2 bg-neutral-950 rounded-2xl border border-neutral-800 print:max-h-none print:overflow-visible print:p-0 print:border-none print:bg-white">
+                <InvoiceSlip booking={printBooking} hotelSettings={settings} />
+              </div>
+
+              <div className="pt-2 flex justify-between items-center text-xs text-neutral-400 no-print">
+                <span>Only the official invoice voucher slip will be printed. No dashboard navigation or website background.</span>
+                <button
+                  type="button"
+                  onClick={() => setPrintBooking(null)}
+                  className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>

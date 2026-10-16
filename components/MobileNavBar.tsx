@@ -24,7 +24,8 @@ export default function MobileNavBar() {
   return (
     <nav 
       aria-label="Mobile Bottom Navigation" 
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-neutral-200/80 shadow-[0_-5px_20px_rgba(0,0,0,0.06)] px-3 py-2"
+      data-mobile-navbar="true"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-neutral-200/80 shadow-[0_-5px_20px_rgba(0,0,0,0.06)] px-3 py-2 no-print"
     >
       <div className="flex items-center justify-around max-w-lg mx-auto">
         {navItems.map((item) => {

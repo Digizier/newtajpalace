@@ -76,6 +76,7 @@ export interface Booking {
   meal_addons_selected: BookingMealSelection[];
   room_total: number;
   addons_total: number;
+  extra_charges?: number;
   discount_total: number;
   tax_total: number;
   grand_total: number;

@@ -24,7 +24,8 @@ export default function WhatsAppFloating({ roomName, bookingRef }: WhatsAppFloat
   return (
     <aside
       aria-label="Direct WhatsApp Contact"
-      className="fixed bottom-20 md:bottom-8 right-5 md:right-8 z-40 flex items-center group"
+      data-floating-whatsapp="true"
+      className="fixed bottom-20 md:bottom-8 right-5 md:right-8 z-40 flex items-center group no-print"
     >
       <div className="hidden md:flex items-center bg-white/95 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-neutral-100 mr-3 text-xs font-semibold text-neutral-800 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
         Chat with Front Desk

@@ -629,3 +629,96 @@ export async function getContactMessages(): Promise<ContactMessage[]> {
   if (error) throw error;
   return data || [];
 }
+
+export async function deleteContactMessage(id: string): Promise<void> {
+  const { error } = await supabase.from('contact_messages').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteAllContactMessages(): Promise<void> {
+  const { error } = await supabase.from('contact_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  if (error) throw error;
+}
+
+// ==========================================
+// 10. PAYMENT PROOFS (BANK TRANSFER RECEIPTS)
+// ==========================================
+export async function createPaymentProof(proof: {
+  booking_reference: string;
+  proof_url: string;
+  transaction_id?: string;
+  notes?: string;
+  status?: 'under_review' | 'verified' | 'rejected';
+}): Promise<PaymentProof> {
+  const { data, error } = await supabase
+    .from('payment_proofs')
+    .insert({
+      booking_reference: proof.booking_reference,
+      proof_url: proof.proof_url,
+      transaction_id: proof.transaction_id || null,
+      notes: proof.notes || null,
+      status: proof.status || 'under_review',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create payment proof:', error);
+    throw error;
+  }
+  return data as PaymentProof;
+}
+
+export async function getAllPaymentProofs(): Promise<PaymentProof[]> {
+  const { data, error } = await supabase
+    .from('payment_proofs')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Failed to fetch payment proofs:', error);
+    return [];
+  }
+  return (data as PaymentProof[]) || [];
+}
+
+export async function getPaymentProofByReference(reference: string): Promise<PaymentProof | null> {
+  const { data, error } = await supabase
+    .from('payment_proofs')
+    .select('*')
+    .eq('booking_reference', reference.trim().toUpperCase())
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching proof by reference:', error);
+    return null;
+  }
+  return (data as PaymentProof) || null;
+}
+
+export async function savePaymentProof(proof: Partial<PaymentProof>): Promise<PaymentProof> {
+  if (proof.id) {
+    const { data, error } = await supabase
+      .from('payment_proofs')
+      .update(proof)
+      .eq('id', proof.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as PaymentProof;
+  } else {
+    const { data, error } = await supabase
+      .from('payment_proofs')
+      .insert({
+        booking_reference: proof.booking_reference || '',
+        proof_url: proof.proof_url || '',
+        transaction_id: proof.transaction_id || null,
+        notes: proof.notes || null,
+        status: proof.status || 'under_review',
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as PaymentProof;
+  }
+}

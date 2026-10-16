@@ -33,7 +33,8 @@ import {
   validatePromoCode, 
   createBooking, 
   getHotelSettings,
-  uploadMediaFile
+  uploadMediaFile,
+  createPaymentProof
 } from '@/lib/db';
 import type { 
   RoomCategory, 
@@ -321,10 +322,15 @@ function BookingEngineContent() {
       if (paymentMethod === 'bank_transfer' && transferProofFile) {
         try {
           const proofUrl = await uploadMediaFile(transferProofFile, 'proofs');
-          // Update payment proof reference
-          console.log('Proof uploaded:', proofUrl);
+          await createPaymentProof({
+            booking_reference: newBooking.reference,
+            proof_url: proofUrl,
+            transaction_id: transactionRef.trim() || undefined,
+            notes: `Bank payment receipt submitted by guest (${guestName.trim()}) for booking ${newBooking.reference}`,
+            status: 'under_review',
+          });
         } catch (proofErr) {
-          console.error('Error uploading payment proof:', proofErr);
+          console.error('Error uploading/saving payment proof:', proofErr);
         }
       }
 

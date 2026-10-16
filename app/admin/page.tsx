@@ -31,7 +31,8 @@ import {
   Video,
   Film,
   Wrench,
-  Sparkles
+  Sparkles,
+  ExternalLink
 } from 'lucide-react';
 import InvoiceSlip from '@/components/InvoiceSlip';
 import { 
@@ -61,7 +62,11 @@ import {
   getHotelSettings, 
   updateHotelSettings, 
   getContactMessages,
-  uploadMediaFile
+  deleteContactMessage,
+  deleteAllContactMessages,
+  uploadMediaFile,
+  getAllPaymentProofs,
+  savePaymentProof
 } from '@/lib/db';
 import type { 
   Booking, 
@@ -72,7 +77,8 @@ import type {
   GalleryItem, 
   PromoCode, 
   HotelSettings, 
-  ContactMessage 
+  ContactMessage,
+  PaymentProof
 } from '@/lib/types';
 import CustomModal from '@/components/CustomModal';
 
@@ -120,6 +126,10 @@ export default function AdminPortalPage() {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [printBooking, setPrintBooking] = useState<Booking | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [proofs, setProofs] = useState<Record<string, PaymentProof>>({});
+  const [viewingProofBooking, setViewingProofBooking] = useState<Booking | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [editPhysicalRoom, setEditPhysicalRoom] = useState<Partial<PhysicalRoom> | null>(null);
 
   const PRESET_AMENITIES = [
     'Free High-Speed Wi-Fi',
@@ -174,7 +184,7 @@ export default function AdminPortalPage() {
     if (!isAuthenticated) return;
     setLoading(true);
     try {
-      const [bData, rData, prData, mData, bnData, gData, pData, sData, msgData] = await Promise.all([
+      const [bData, rData, prData, mData, bnData, gData, pData, sData, msgData, proofsData] = await Promise.all([
         getAdminBookings(),
         getAllAdminRoomCategories(),
         getPhysicalRooms(),
@@ -183,7 +193,8 @@ export default function AdminPortalPage() {
         getGalleryItems(),
         getAllPromoCodes(),
         getHotelSettings(),
-        getContactMessages()
+        getContactMessages(),
+        getAllPaymentProofs()
       ]);
       setBookings(bData);
       setRooms(rData);
@@ -194,6 +205,14 @@ export default function AdminPortalPage() {
       setPromos(pData);
       setSettings(sData);
       setMessages(msgData);
+
+      const proofsMap: Record<string, PaymentProof> = {};
+      (proofsData || []).forEach((p) => {
+        if (p.booking_reference) {
+          proofsMap[p.booking_reference] = p;
+        }
+      });
+      setProofs(proofsMap);
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
@@ -318,7 +337,7 @@ export default function AdminPortalPage() {
   });
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-200 flex flex-col lg:flex-row">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-neutral-950 text-neutral-200 flex flex-col lg:flex-row">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 bg-gold-500 text-neutral-950 font-bold px-5 py-3 rounded-2xl shadow-xl flex items-center space-x-2 text-xs sm:text-sm animate-fadeIn">
@@ -342,7 +361,7 @@ export default function AdminPortalPage() {
       {/* ========================================================= */}
       {/* Dedicated Admin Sidebar (Zero public header/footer) */}
       {/* ========================================================= */}
-      <aside className="w-full lg:w-64 bg-neutral-900 border-r border-neutral-800 p-5 flex flex-col justify-between flex-shrink-0">
+      <aside className="w-full lg:w-64 bg-neutral-900 border-r border-neutral-800 p-5 flex flex-col justify-between flex-shrink-0 lg:h-full lg:overflow-y-auto">
         <div>
           {/* Logo & Portal Title */}
           <div className="flex items-center space-x-3 pb-6 border-b border-neutral-800">
@@ -417,7 +436,7 @@ export default function AdminPortalPage() {
       {/* ========================================================= */}
       {/* Main Admin Workspace Area */}
       {/* ========================================================= */}
-      <main className="flex-1 p-6 sm:p-10 overflow-y-auto">
+      <main className="flex-1 p-6 sm:p-10 lg:h-full lg:overflow-y-auto min-w-0">
         {/* Top Action Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-800 mb-8">
           <div>
@@ -648,6 +667,22 @@ export default function AdminPortalPage() {
                           <option value="verified">Verified / Paid</option>
                           <option value="rejected">Payment Rejected</option>
                         </select>
+
+                        {/* View Bank Payment Proof Screenshot */}
+                        {b.payment_method === 'bank_transfer' && (
+                          <button
+                            type="button"
+                            onClick={() => setViewingProofBooking(b)}
+                            className={`p-1.5 rounded-xl transition-all ${
+                              proofs[b.reference]?.proof_url
+                                ? 'bg-gold-500/20 text-gold-400 hover:bg-gold-500/30 border border-gold-500/40 shadow-sm'
+                                : 'bg-neutral-800 text-neutral-300 hover:text-gold-400 hover:bg-neutral-700'
+                            }`}
+                            title={proofs[b.reference]?.proof_url ? "View Bank Payment Proof Screenshot" : "Verify / Attach Payment Receipt"}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        )}
 
                         {/* Edit Reservation Details (Prices, Extras, Notes) */}
                         <button
@@ -1374,40 +1409,181 @@ export default function AdminPortalPage() {
         {/* ========================================================= */}
         {activeTab === 'inventory' && (
           <div className="space-y-6">
-            <span className="text-xs text-neutral-400 block">
-              Manage physical room numbers, floor allocation, and availability status (available, occupied, maintenance).
-            </span>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-              {physicalRooms.map((pr) => (
-                <div
-                  key={pr.id}
-                  className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 text-center space-y-2 shadow-sm"
-                >
-                  <span className="font-mono text-xl font-bold text-white block">#{pr.room_number}</span>
-                  <span className="text-[11px] text-neutral-400 block">{pr.floor}</span>
-
-                  <select
-                    value={pr.status}
-                    onChange={async (e) => {
-                      const nextSt = e.target.value as PhysicalRoom['status'];
-                      await savePhysicalRoom({ id: pr.id, status: nextSt });
-                      showToast(`Room #${pr.room_number} status set to ${nextSt}`);
-                      reloadData();
-                    }}
-                    className={`w-full text-[10px] font-bold py-1 px-1.5 rounded-lg border focus:outline-none ${
-                      pr.status === 'available' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
-                      pr.status === 'occupied' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
-                      'bg-red-500/20 text-red-300 border-red-500/30'
-                    }`}
-                  >
-                    <option value="available">Available</option>
-                    <option value="occupied">Occupied</option>
-                    <option value="maintenance">Maintenance</option>
-                  </select>
+            {/* Operational Purpose Banner */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-5 sm:p-6 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-neutral-800">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gold-500/10 text-gold-400 flex items-center justify-center border border-gold-500/20">
+                    <Building className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif font-bold text-white text-base sm:text-lg">Physical Rooms & Door Keys</h3>
+                    <p className="text-xs text-neutral-400">Building-level inventory for front desk check-in, key assignment & housekeeping.</p>
+                  </div>
                 </div>
-              ))}
+
+                <button
+                  type="button"
+                  onClick={() => setEditPhysicalRoom({
+                    room_number: '',
+                    floor: '1st Floor',
+                    category_id: rooms[0]?.id || '',
+                    status: 'available',
+                    notes: ''
+                  })}
+                  className="px-4 py-2.5 rounded-xl bg-gold-500 hover:bg-gold-600 text-neutral-950 font-bold text-xs flex items-center space-x-1.5 shadow-md active:scale-95 transition-all self-start sm:self-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Physical Room</span>
+                </button>
+              </div>
+
+              {/* Educational Explanation Box */}
+              <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800 text-xs text-neutral-400 leading-relaxed space-y-1.5">
+                <p className="font-bold text-gold-400 uppercase tracking-wider text-[11px]">
+                  Why Use This Section vs. Room Suites?
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 text-neutral-300">
+                  <div className="bg-neutral-900/60 p-2.5 rounded-xl border border-neutral-800">
+                    <span className="font-bold text-white block mb-0.5">1. Key Handover:</span>
+                    When a guest arrives at the hotel, the front desk assigns an exact room door number (e.g. Room #101) from this list.
+                  </div>
+                  <div className="bg-neutral-900/60 p-2.5 rounded-xl border border-neutral-800">
+                    <span className="font-bold text-white block mb-0.5">2. Housekeeping Status:</span>
+                    Mark rooms as Available (cleaned & ready), Occupied (guest checked in), or Maintenance (under cleaning/repairs).
+                  </div>
+                  <div className="bg-neutral-900/60 p-2.5 rounded-xl border border-neutral-800">
+                    <span className="font-bold text-white block mb-0.5">3. Actual Hotel Capacity:</span>
+                    Maintains the physical count of real rooms inside the hotel building on Bund Road.
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Overview Badges */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                <span className="bg-neutral-950 border border-neutral-800 px-3 py-1.5 rounded-xl font-semibold text-neutral-300">
+                  Total Rooms: <strong className="text-white">{physicalRooms.length}</strong>
+                </span>
+                <span className="bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-semibold text-emerald-400">
+                  Available: <strong>{physicalRooms.filter(r => r.status === 'available').length}</strong>
+                </span>
+                <span className="bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-xl font-semibold text-amber-400">
+                  Occupied: <strong>{physicalRooms.filter(r => r.status === 'occupied').length}</strong>
+                </span>
+                <span className="bg-red-500/10 border border-red-500/30 px-3 py-1.5 rounded-xl font-semibold text-red-400">
+                  Maintenance: <strong>{physicalRooms.filter(r => r.status === 'maintenance').length}</strong>
+                </span>
+              </div>
             </div>
+
+            {/* Physical Rooms Grid */}
+            {physicalRooms.length === 0 ? (
+              <div className="py-16 text-center bg-neutral-900 rounded-3xl border border-neutral-800 p-6">
+                <Building className="w-10 h-10 text-neutral-600 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-neutral-300">No physical rooms registered yet</p>
+                <p className="text-xs text-neutral-500 mt-1">Click "Add Physical Room" above to enter room numbers (e.g. 101, 102, 201).</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {physicalRooms.map((pr) => {
+                  const assignedCategory = rooms.find(r => r.id === pr.category_id);
+                  return (
+                    <div
+                      key={pr.id}
+                      className="bg-neutral-900 border border-neutral-800 rounded-3xl p-5 space-y-3.5 shadow-sm hover:border-neutral-700 transition-all flex flex-col justify-between"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xl font-bold text-white bg-neutral-950 px-2.5 py-1 rounded-xl border border-neutral-800">
+                            #{pr.room_number}
+                          </span>
+                          <span className="text-xs font-semibold text-gold-400 bg-gold-500/10 px-2.5 py-0.5 rounded-lg border border-gold-500/20">
+                            {pr.floor}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] text-neutral-500 uppercase font-bold block">Assigned Suite</span>
+                          <span className="text-xs font-bold text-neutral-200 truncate block">
+                            {assignedCategory?.name || 'Standard Category'}
+                          </span>
+                        </div>
+
+                        {pr.notes && (
+                          <p className="text-[11px] text-neutral-400 bg-neutral-950 p-2 rounded-xl border border-neutral-800 line-clamp-2">
+                            {pr.notes}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t border-neutral-800">
+                        {/* Status Dropdown */}
+                        <div>
+                          <label className="text-[10px] text-neutral-500 uppercase font-bold block mb-1">Status</label>
+                          <select
+                            value={pr.status}
+                            onChange={async (e) => {
+                              const nextSt = e.target.value as PhysicalRoom['status'];
+                              await savePhysicalRoom({ id: pr.id, status: nextSt });
+                              showToast(`Room #${pr.room_number} status set to ${nextSt}`);
+                              reloadData();
+                            }}
+                            className={`w-full text-xs font-bold py-1.5 px-2 rounded-xl border focus:outline-none transition-all ${
+                              pr.status === 'available' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
+                              pr.status === 'occupied' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+                              'bg-red-500/20 text-red-300 border-red-500/30'
+                            }`}
+                          >
+                            <option value="available">Available (Ready)</option>
+                            <option value="occupied">Occupied (Guest)</option>
+                            <option value="maintenance">Maintenance</option>
+                          </select>
+                        </div>
+
+                        {/* Edit & Delete Action Buttons */}
+                        <div className="flex items-center space-x-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditPhysicalRoom(pr)}
+                            className="flex-1 py-1.5 px-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-semibold flex items-center justify-center space-x-1 transition-all"
+                            title="Edit room configuration"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-gold-400" />
+                            <span>Edit</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeleteModal({
+                                isOpen: true,
+                                title: `Delete Room #${pr.room_number}`,
+                                message: `Are you sure you want to permanently delete Room #${pr.room_number} (${pr.floor}) from the physical inventory? This action removes the room directly from the database.`,
+                                onConfirm: async () => {
+                                  try {
+                                    await deletePhysicalRoom(pr.id);
+                                    showToast(`Room #${pr.room_number} deleted from inventory`);
+                                    setDeleteModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+                                    reloadData();
+                                  } catch (delErr) {
+                                    console.error('Failed to delete room:', delErr);
+                                    showToast('Failed to delete room. Please try again.');
+                                  }
+                                }
+                              });
+                            }}
+                            className="p-1.5 rounded-xl bg-neutral-800 text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            title="Delete physical room"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -2028,25 +2204,136 @@ export default function AdminPortalPage() {
         {/* TAB 10: GUEST INQUIRIES & MESSAGES */}
         {/* ========================================================= */}
         {activeTab === 'messages' && (
-          <div className="space-y-4">
-            <span className="text-xs text-neutral-400 block">Messages submitted from the website Contact page.</span>
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-900 p-5 rounded-3xl border border-neutral-800">
+              <div>
+                <h3 className="font-serif font-bold text-white text-base sm:text-lg">Customer Inquiries & Contact Leads</h3>
+                <p className="text-xs text-neutral-400 mt-0.5">Real-time messages submitted by visitors from the website Contact page.</p>
+              </div>
+
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteModal({
+                      isOpen: true,
+                      title: 'Clear All Inquiries',
+                      message: `Are you sure you want to permanently delete all ${messages.length} customer inquiries? This action will remove all inquiry records directly from the database and cannot be undone.`,
+                      onConfirm: async () => {
+                        try {
+                          await deleteAllContactMessages();
+                          showToast('All customer inquiries have been cleared from database');
+                          setDeleteModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+                          reloadData();
+                        } catch (delAllErr) {
+                          console.error('Error clearing inquiries:', delAllErr);
+                          showToast('Failed to clear inquiries. Please try again.');
+                        }
+                      }
+                    });
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold flex items-center space-x-1.5 transition-all self-start sm:self-auto"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Clear All Inquiries</span>
+                </button>
+              )}
+            </div>
+
             {messages.length === 0 ? (
               <div className="py-16 text-center bg-neutral-900 rounded-3xl border border-neutral-800 p-6">
-                <p className="text-sm text-neutral-400">No customer inquiries recorded yet.</p>
+                <Mail className="w-10 h-10 text-neutral-600 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-neutral-300">No customer inquiries found</p>
+                <p className="text-xs text-neutral-500 mt-1">When guests submit the Contact Us form on the website, their messages will appear here in real time.</p>
               </div>
             ) : (
-              messages.map((m) => (
-                <div key={m.id} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-2">
-                  <div className="flex justify-between items-baseline">
-                    <span className="font-bold text-white text-sm">{m.name}</span>
-                    <span className="text-xs text-gold-400">{m.phone}</span>
-                  </div>
-                  {m.subject && <p className="text-xs font-semibold text-neutral-300">{m.subject}</p>}
-                  <p className="text-xs text-neutral-400 leading-relaxed bg-neutral-950 p-3 rounded-xl border border-neutral-800">
-                    {m.message}
-                  </p>
-                </div>
-              ))
+              <div className="space-y-4">
+                {messages.map((m) => {
+                  const cleanPhone = (m.phone || '').replace(/[^0-9]/g, '');
+                  return (
+                    <div
+                      key={m.id}
+                      className="bg-neutral-900 border border-neutral-800 rounded-3xl p-5 sm:p-6 space-y-3.5 shadow-sm hover:border-neutral-700 transition-all"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-800">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <span className="font-bold text-white text-base">{m.name}</span>
+                          {m.created_at && (
+                            <span className="text-[11px] text-neutral-500">
+                              • {new Date(m.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          {cleanPhone && (
+                            <a
+                              href={`https://wa.me/${cleanPhone.startsWith('92') ? cleanPhone : '92' + cleanPhone.replace(/^0+/, '')}?text=${encodeURIComponent(`Hello ${m.name}, thank you for contacting New Taj Palace Hotel Lahore regarding your inquiry.`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold flex items-center space-x-1.5 transition-all"
+                              title="Direct reply on WhatsApp"
+                            >
+                              <span>WhatsApp</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeleteModal({
+                                isOpen: true,
+                                title: 'Delete Inquiry',
+                                message: `Are you sure you want to permanently delete the inquiry from "${m.name}"? This action will remove the record directly from the database.`,
+                                onConfirm: async () => {
+                                  try {
+                                    await deleteContactMessage(m.id);
+                                    showToast(`Inquiry from ${m.name} deleted`);
+                                    setDeleteModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+                                    reloadData();
+                                  } catch (delErr) {
+                                    console.error('Failed to delete inquiry:', delErr);
+                                    showToast('Failed to delete inquiry. Please try again.');
+                                  }
+                                }
+                              });
+                            }}
+                            className="p-1.5 rounded-xl bg-neutral-800 text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            title="Delete this inquiry"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="flex items-center space-x-2 text-neutral-300">
+                          <span className="text-neutral-500 font-bold uppercase text-[10px]">Phone / Mobile:</span>
+                          <span className="font-mono text-gold-400 font-semibold">{m.phone}</span>
+                        </div>
+                        {m.email && (
+                          <div className="flex items-center space-x-2 text-neutral-300">
+                            <span className="text-neutral-500 font-bold uppercase text-[10px]">Email Address:</span>
+                            <span className="text-neutral-300">{m.email}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {m.subject && (
+                        <div className="text-xs font-bold text-neutral-200">
+                          <span className="text-neutral-500 uppercase text-[10px] mr-1.5">Subject:</span>
+                          {m.subject}
+                        </div>
+                      )}
+
+                      <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800 text-xs text-neutral-300 leading-relaxed whitespace-pre-wrap">
+                        {m.message}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
@@ -2448,6 +2735,354 @@ export default function AdminPortalPage() {
                   className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition-colors"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* BANK PAYMENT PROOF SCREENSHOT VIEWER & VERIFICATION MODAL */}
+        {/* ========================================================= */}
+        {viewingProofBooking && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
+            <div className="bg-neutral-900 border border-neutral-700 rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col my-auto shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900 shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gold-500/20 text-gold-400 flex items-center justify-center border border-gold-500/30">
+                    <Eye className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gold-400 block">Bank Transfer Verification</span>
+                    <h3 className="font-serif font-bold text-white text-base sm:text-lg">
+                      Payment Proof • #{viewingProofBooking.reference}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewingProofBooking(null)}
+                  className="text-neutral-400 hover:text-white p-2 rounded-xl border border-neutral-800 hover:bg-neutral-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+                {/* Booking summary badge card */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-neutral-950 p-4 rounded-2xl border border-neutral-800 text-xs">
+                  <div>
+                    <span className="text-neutral-500 font-bold block text-[10px] uppercase">Guest</span>
+                    <span className="font-bold text-white text-sm block truncate">{viewingProofBooking.guest_name}</span>
+                    <span className="text-neutral-400 text-[11px]">{viewingProofBooking.guest_phone}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 font-bold block text-[10px] uppercase">Amount Due / Paid</span>
+                    <span className="font-serif font-bold text-gold-400 text-base block">Rs. {viewingProofBooking.grand_total.toLocaleString()}</span>
+                    <span className="text-neutral-400 text-[11px]">{viewingProofBooking.nights} night(s) stay</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 font-bold block text-[10px] uppercase">Payment Status</span>
+                    <span className={`inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold mt-1 ${
+                      viewingProofBooking.payment_status === 'verified' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                      viewingProofBooking.payment_status === 'under_review' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                      viewingProofBooking.payment_status === 'rejected' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                      'bg-neutral-800 text-neutral-300'
+                    }`}>
+                      {viewingProofBooking.payment_status.replace('_', ' ').toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 font-bold block text-[10px] uppercase">Booking Status</span>
+                    <span className="font-semibold text-neutral-200 capitalize block mt-1">
+                      {viewingProofBooking.booking_status.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Screenshot Display or Upload */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider flex items-center space-x-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-gold-400" />
+                      <span>Bank Slip / Mobile Screenshot</span>
+                    </span>
+
+                    {proofs[viewingProofBooking.reference]?.proof_url && (
+                      <a
+                        href={proofs[viewingProofBooking.reference].proof_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-gold-400 hover:text-gold-300 font-semibold flex items-center space-x-1 hover:underline"
+                      >
+                        <span>Open Full Size</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+
+                  {proofs[viewingProofBooking.reference]?.proof_url ? (
+                    <div className="space-y-3">
+                      <div className="relative rounded-2xl overflow-hidden border border-neutral-700 bg-black/60 max-h-[380px] flex items-center justify-center p-2">
+                        <img
+                          src={proofs[viewingProofBooking.reference].proof_url}
+                          alt="Bank Transfer Receipt"
+                          className="max-h-[360px] w-auto max-w-full object-contain rounded-xl shadow-lg"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-neutral-950 p-3.5 rounded-2xl border border-neutral-800">
+                        <div>
+                          <span className="text-neutral-500 font-bold block text-[10px] uppercase">Transaction Reference ID</span>
+                          <span className="font-mono text-white font-semibold">
+                            {proofs[viewingProofBooking.reference]?.transaction_id || 'Not provided by guest'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-500 font-bold block text-[10px] uppercase">Submission Timestamp</span>
+                          <span className="text-neutral-300">
+                            {proofs[viewingProofBooking.reference]?.created_at
+                              ? new Date(proofs[viewingProofBooking.reference].created_at!).toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' })
+                              : 'Online Checkout'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border-2 border-dashed border-neutral-700 bg-neutral-950 p-6 text-center space-y-3">
+                      <AlertCircle className="w-8 h-8 text-amber-500 mx-auto" />
+                      <div>
+                        <h4 className="text-sm font-bold text-white">No Payment Receipt Attached Yet</h4>
+                        <p className="text-xs text-neutral-400 mt-1">
+                          The guest selected Bank Transfer during checkout but did not upload a screenshot, or sent it directly via WhatsApp.
+                        </p>
+                      </div>
+
+                      {/* Staff Receipt Uploader */}
+                      <div className="pt-2">
+                        <label className="inline-flex items-center space-x-2 bg-neutral-800 hover:bg-neutral-700 text-gold-400 border border-neutral-600 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all">
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>{uploadingProof ? 'Uploading Receipt...' : 'Attach Receipt Screenshot Now'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={uploadingProof}
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file && viewingProofBooking) {
+                                setUploadingProof(true);
+                                try {
+                                  const url = await uploadMediaFile(file, 'proofs');
+                                  await savePaymentProof({
+                                    booking_reference: viewingProofBooking.reference,
+                                    proof_url: url,
+                                    notes: 'Receipt attached by hotel administrator',
+                                    status: 'under_review'
+                                  });
+                                  showToast('Payment proof screenshot attached successfully');
+                                  reloadData();
+                                } catch (upErr) {
+                                  console.error('Error attaching proof:', upErr);
+                                  showToast('Failed to attach proof screenshot');
+                                } finally {
+                                  setUploadingProof(false);
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Action Decision Buttons */}
+                <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800 space-y-3">
+                  <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">
+                    Update Payment Status for #{viewingProofBooking.reference}
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await updateBookingStatus(viewingProofBooking.id, 'confirmed', 'verified');
+                        showToast(`Payment verified and booking #${viewingProofBooking.reference} confirmed!`);
+                        setViewingProofBooking(null);
+                        reloadData();
+                      }}
+                      className="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 transition-all"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Verify & Confirm Stay</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await updateBookingStatus(viewingProofBooking.id, viewingProofBooking.booking_status, 'rejected');
+                        showToast(`Payment marked as rejected for booking #${viewingProofBooking.reference}`);
+                        setViewingProofBooking(null);
+                        reloadData();
+                      }}
+                      className="px-3.5 py-2.5 rounded-xl bg-red-600/80 hover:bg-red-600 text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 transition-all"
+                    >
+                      <AlertCircle className="w-4 h-4" />
+                      <span>Reject Payment</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await updateBookingStatus(viewingProofBooking.id, 'pending_review', 'under_review');
+                        showToast(`Payment set back to under review`);
+                        setViewingProofBooking(null);
+                        reloadData();
+                      }}
+                      className="px-3.5 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold text-xs flex items-center justify-center space-x-1.5 transition-all"
+                    >
+                      <span>Keep Under Review</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-neutral-800 flex justify-end bg-neutral-900 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setViewingProofBooking(null)}
+                  className="px-5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* ADD / EDIT PHYSICAL ROOM MODAL */}
+        {/* ========================================================= */}
+        {editPhysicalRoom && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
+            <div className="bg-neutral-900 border border-neutral-700 rounded-3xl max-w-md w-full my-auto shadow-2xl overflow-hidden space-y-0">
+              <div className="p-4 sm:p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-900">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gold-400 block">
+                    {editPhysicalRoom.id ? 'Edit Physical Room' : 'Add New Physical Room'}
+                  </span>
+                  <h3 className="font-serif font-bold text-white text-base sm:text-lg">
+                    {editPhysicalRoom.room_number ? `Room #${editPhysicalRoom.room_number}` : 'New Room Door & Key'}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditPhysicalRoom(null)}
+                  className="text-neutral-400 hover:text-white p-1.5 rounded-xl border border-neutral-800 hover:bg-neutral-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6 space-y-4 text-xs">
+                <div>
+                  <label className="font-bold text-neutral-400 uppercase block mb-1">Room Door Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 101, 102, 204, 301"
+                    value={editPhysicalRoom.room_number || ''}
+                    onChange={(e) => setEditPhysicalRoom({ ...editPhysicalRoom, room_number: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-white font-mono font-bold focus:border-gold-500 focus:outline-none"
+                  />
+                  <span className="text-[10px] text-neutral-500 mt-1 block">The actual door number marked on the room key and hotel corridor.</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-neutral-400 uppercase block mb-1">Building Floor</label>
+                    <select
+                      value={editPhysicalRoom.floor || '1st Floor'}
+                      onChange={(e) => setEditPhysicalRoom({ ...editPhysicalRoom, floor: e.target.value })}
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-white font-semibold focus:border-gold-500 focus:outline-none"
+                    >
+                      <option value="Ground Floor">Ground Floor</option>
+                      <option value="1st Floor">1st Floor</option>
+                      <option value="2nd Floor">2nd Floor</option>
+                      <option value="3rd Floor">3rd Floor</option>
+                      <option value="4th Floor">4th Floor</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-neutral-400 uppercase block mb-1">Room Status</label>
+                    <select
+                      value={editPhysicalRoom.status || 'available'}
+                      onChange={(e) => setEditPhysicalRoom({ ...editPhysicalRoom, status: e.target.value as PhysicalRoom['status'] })}
+                      className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-white font-semibold focus:border-gold-500 focus:outline-none"
+                    >
+                      <option value="available">Available (Clean & Ready)</option>
+                      <option value="occupied">Occupied (Guest Checked In)</option>
+                      <option value="maintenance">Maintenance (Cleaning/Repair)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-neutral-400 uppercase block mb-1">Assigned Suite Category</label>
+                  <select
+                    value={editPhysicalRoom.category_id || (rooms[0]?.id || '')}
+                    onChange={(e) => setEditPhysicalRoom({ ...editPhysicalRoom, category_id: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-white font-semibold focus:border-gold-500 focus:outline-none"
+                  >
+                    {rooms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} (Rs. {r.base_price.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-[10px] text-neutral-500 mt-1 block">Connects this door to the marketing suite category guests book online.</span>
+                </div>
+
+                <div>
+                  <label className="font-bold text-neutral-400 uppercase block mb-1">Housekeeping & Maintenance Notes</label>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. AC serviced recently, extra blanket in wardrobe, street-facing window..."
+                    value={editPhysicalRoom.notes || ''}
+                    onChange={(e) => setEditPhysicalRoom({ ...editPhysicalRoom, notes: e.target.value })}
+                    className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-white focus:border-gold-500 focus:outline-none resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-neutral-800 flex justify-end space-x-2 bg-neutral-900">
+                <button
+                  type="button"
+                  onClick={() => setEditPhysicalRoom(null)}
+                  className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!editPhysicalRoom.room_number?.trim()}
+                  onClick={async () => {
+                    try {
+                      await savePhysicalRoom(editPhysicalRoom);
+                      showToast(`Room #${editPhysicalRoom.room_number} saved to inventory!`);
+                      setEditPhysicalRoom(null);
+                      reloadData();
+                    } catch (err) {
+                      console.error('Failed to save physical room:', err);
+                      showToast('Failed to save room. Ensure room number is unique.');
+                    }
+                  }}
+                  className="px-5 py-2 rounded-xl bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-neutral-950 font-bold text-xs shadow-md active:scale-95 transition-all"
+                >
+                  Save Physical Room
                 </button>
               </div>
             </div>

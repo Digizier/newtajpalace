@@ -20,8 +20,12 @@ import {
   AlertCircle,
   FileText,
   Printer,
-  X
+  X,
+  Video,
+  Wrench,
+  Eye
 } from 'lucide-react';
+import RoomDetailsModal from '@/components/RoomDetailsModal';
 import InvoiceSlip from '@/components/InvoiceSlip';
 import { 
   getAllAdminRoomCategories, 
@@ -64,6 +68,7 @@ function BookingEngineContent() {
 
   // Selected Room
   const [selectedRoom, setSelectedRoom] = useState<RoomCategory | null>(null);
+  const [modalRoom, setModalRoom] = useState<RoomCategory | null>(null);
 
   // Selected Meal Add-ons: Map of addonCode -> { adults: number, children: number }
   const [selectedAddons, setSelectedAddons] = useState<Record<string, { adults: number; children: number }>>({});
@@ -398,50 +403,212 @@ function BookingEngineContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {rooms.map((room) => {
                     const isSelected = selectedRoom?.id === room.id;
+                    const roomStatus = room.status || 'available';
+                    const isAvailable = roomStatus === 'available';
+                    const isOccupied = roomStatus === 'occupied';
+                    const isMaintenance = roomStatus === 'maintenance';
+                    const galleryCount = (Array.isArray(room.gallery_images) ? room.gallery_images.length : 0);
+
+                    // Group fit calculations
+                    const maxAdults = room.max_adults || 2;
+                    const maxKids = room.max_children ?? 0;
+                    const fitsAdults = adults <= maxAdults;
+                    const fitsKids = children <= maxKids;
+                    const fitsGroup = fitsAdults && fitsKids;
+
                     return (
                       <div
                         key={room.id}
-                        onClick={() => setSelectedRoom(room)}
-                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                        className={`p-4 rounded-3xl border-2 transition-all flex flex-col justify-between ${
                           isSelected
                             ? 'border-gold-500 bg-gold-50/20 shadow-md ring-2 ring-gold-500/20'
                             : 'border-neutral-200 hover:border-neutral-300 bg-white'
                         }`}
                       >
                         <div>
-                          <div className="relative h-40 rounded-xl overflow-hidden mb-3">
+                          {/* Image & Quick View Trigger */}
+                          <div
+                            onClick={() => setModalRoom(room)}
+                            className="relative h-44 rounded-2xl overflow-hidden mb-3 cursor-pointer group"
+                            title="Click to view full photos and walkthrough video"
+                          >
                             <img
                               src={room.featured_image || '/images/rooms/room-2.webp'}
                               alt={room.name}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             />
-                            <div className="absolute top-2 right-2 bg-charcoal/80 text-gold-300 px-2.5 py-1 rounded-lg text-xs font-bold">
+                            {/* Price Badge */}
+                            <div className="absolute top-2 right-2 bg-charcoal/85 backdrop-blur-sm text-gold-300 px-2.5 py-1 rounded-xl text-xs font-bold shadow">
                               Rs. {room.base_price.toLocaleString()} / nt
                             </div>
+
+                            {/* Status Badges */}
+                            <div className="absolute top-2 left-2 flex flex-col space-y-1">
+                              {isAvailable && (
+                                <span className="inline-flex items-center space-x-1 bg-emerald-950/85 backdrop-blur-sm text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                  <span>Available</span>
+                                </span>
+                              )}
+                              {isOccupied && (
+                                <span className="inline-flex items-center space-x-1 bg-amber-950/85 backdrop-blur-sm text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                  <AlertCircle className="w-3 h-3 text-amber-400" />
+                                  <span>Occupied</span>
+                                </span>
+                              )}
+                              {isMaintenance && (
+                                <span className="inline-flex items-center space-x-1 bg-neutral-900/85 backdrop-blur-sm text-neutral-300 border border-neutral-600 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                  <Wrench className="w-3 h-3 text-neutral-400" />
+                                  <span>Maintenance</span>
+                                </span>
+                              )}
+                            </div>
+
+                            {/* View Details Pill Overlay */}
+                            <div className="absolute bottom-2 right-2 bg-black/75 hover:bg-black/90 backdrop-blur-sm text-white px-2.5 py-1 rounded-xl text-[11px] font-semibold flex items-center space-x-1.5 shadow">
+                              <Eye className="w-3.5 h-3.5 text-gold-400" />
+                              <span>Photos & Video</span>
+                            </div>
+
+                            {/* Media indicators */}
+                            <div className="absolute bottom-2 left-2 flex items-center space-x-1 text-[10px] font-bold text-white">
+                              {galleryCount > 0 && (
+                                <span className="bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded-md">
+                                  {galleryCount + 1} Photos
+                                </span>
+                              )}
+                              {room.video_url && (
+                                <span className="bg-black/70 backdrop-blur-sm px-2 py-0.5 rounded-md text-red-400 flex items-center space-x-1">
+                                  <Video className="w-3 h-3" />
+                                  <span>Video</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <h4 className="font-serif font-bold text-neutral-900">{room.name}</h4>
-                          <p className="text-xs text-neutral-500 mt-1 line-clamp-2">{room.short_desc}</p>
-                          <div className="flex items-center space-x-3 text-xs text-neutral-500 mt-2">
-                            <span>Max {room.max_adults} Adults</span>
+
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 
+                              onClick={() => setModalRoom(room)}
+                              className="font-serif font-bold text-base sm:text-lg text-neutral-900 hover:text-gold-700 transition-colors cursor-pointer"
+                            >
+                              {room.name}
+                            </h4>
+                          </div>
+
+                          <p className="text-xs text-neutral-500 mt-1 line-clamp-2 leading-relaxed">{room.short_desc}</p>
+                          
+                          {/* Room Capacity Specs */}
+                          <div className="flex flex-wrap items-center gap-1.5 text-xs text-neutral-500 mt-2.5">
+                            <span className="font-semibold text-neutral-700">Max {maxAdults} Adults</span>
+                            <span>•</span>
+                            <span className="font-semibold text-neutral-700">{maxKids} Kids</span>
                             <span>•</span>
                             <span>{room.bed_type}</span>
+                            {room.room_size && (
+                              <>
+                                <span>•</span>
+                                <span>{room.room_size}</span>
+                              </>
+                            )}
                           </div>
+
+                          {/* Group Suitability Indicator (Synced dynamically with Adults & Children custom selectors) */}
+                          <div className="mt-2.5">
+                            {fitsGroup ? (
+                              <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[11px] font-bold">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                                <span>Fits Your Group ({adults} Adult{adults > 1 ? 's' : ''}{children > 0 ? `, ${children} Kid${children > 1 ? 's' : ''}` : ''})</span>
+                              </div>
+                            ) : !fitsAdults ? (
+                              <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200/80 text-[11px] font-semibold">
+                                <AlertCircle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                                <span>You selected {adults} Adults (Suite accommodates max {maxAdults})</span>
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200/80 text-[11px] font-semibold">
+                                <AlertCircle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                                <span>You selected {children} Kids (Suite accommodates max {maxKids})</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Quick Amenities Chips */}
+                          {Array.isArray(room.amenities) && room.amenities.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2.5">
+                              {room.amenities.slice(0, 3).map((amenity, i) => (
+                                <span key={i} className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-md font-medium">
+                                  {amenity}
+                                </span>
+                              ))}
+                              {room.amenities.length > 3 && (
+                                <span className="text-[10px] bg-neutral-100 text-gold-700 px-1.5 py-0.5 rounded-md font-semibold">
+                                  +{room.amenities.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between">
-                          <span className="text-xs font-bold text-neutral-700">
-                            Subtotal: Rs. {(room.base_price * nights).toLocaleString()}
-                          </span>
-                          <button
-                            type="button"
-                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                              isSelected
-                                ? 'bg-gold-500 text-white'
-                                : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                            }`}
-                          >
-                            {isSelected ? '✓ Selected' : 'Select'}
-                          </button>
+                        {/* Card Footer Actions */}
+                        <div className="mt-4 pt-3 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <span className="block text-[10px] uppercase font-bold text-neutral-400">Total for {nights} night{nights > 1 ? 's' : ''}</span>
+                            <span className="text-xs sm:text-sm font-bold text-neutral-900 font-serif">
+                              Rs. {(room.base_price * nights).toLocaleString()}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => setModalRoom(room)}
+                              className="px-3 py-1.5 rounded-xl border border-neutral-300 text-neutral-700 hover:bg-neutral-100 text-xs font-bold transition-colors"
+                            >
+                              Photos & Video
+                            </button>
+
+                            {isAvailable ? (
+                              isSelected ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    setCurrentPhase(2);
+                                  }}
+                                  className="bg-gold-500 hover:bg-gold-600 text-white font-bold px-4 py-1.5 rounded-xl text-xs flex items-center space-x-1 shadow-sm active:scale-95 transition-all"
+                                >
+                                  <span>Proceed to Meals</span>
+                                  <ArrowRight className="w-3.5 h-3.5" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedRoom(room)}
+                                  className="bg-neutral-900 hover:bg-neutral-800 text-white font-bold px-4 py-1.5 rounded-xl text-xs transition-colors"
+                                >
+                                  Select Suite
+                                </button>
+                              )
+                            ) : isOccupied ? (
+                              <a
+                                href={`https://wa.me/923224845461?text=${encodeURIComponent(`Hello New Taj Palace! I am interested in "${room.name}", which shows Occupied online.`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-amber-600 text-white font-bold px-3 py-1.5 rounded-xl text-xs"
+                              >
+                                Occupied (Inquire)
+                              </a>
+                            ) : (
+                              <a
+                                href={`https://wa.me/923224845461?text=${encodeURIComponent(`Hello New Taj Palace! I am asking about "${room.name}", currently under maintenance.`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-neutral-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs"
+                              >
+                                Maintenance
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -1177,6 +1344,47 @@ function BookingEngineContent() {
           </div>
         )}
       </div>
+
+      {/* Sticky Bottom Bar for Phase 1 Instant Proceed (Mobile & Desktop) */}
+      {currentPhase === 1 && selectedRoom && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-neutral-900/95 backdrop-blur-md border-t border-neutral-700/80 px-4 py-3 shadow-2xl no-print">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-bold text-gold-400 block tracking-wider">
+                Selected Room Suite
+              </span>
+              <p className="text-xs sm:text-sm font-bold text-white truncate">
+                {selectedRoom.name} <span className="text-neutral-400 font-normal">({nights}nt • Rs. {(selectedRoom.base_price * nights).toLocaleString()})</span>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setCurrentPhase(2);
+              }}
+              className="bg-gold-500 hover:bg-gold-600 active:scale-95 text-neutral-950 font-bold px-5 sm:px-7 py-2.5 rounded-xl text-xs sm:text-sm flex items-center space-x-2 shadow-lg shrink-0 transition-all"
+            >
+              <span>Proceed to Meal Add-ons</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Room Details & YouTube Walkthrough Modal */}
+      {modalRoom && (
+        <RoomDetailsModal
+          room={modalRoom}
+          onClose={() => setModalRoom(null)}
+          onSelectAndProceed={(r) => {
+            setSelectedRoom(r);
+            setModalRoom(null);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setCurrentPhase(2);
+          }}
+        />
+      )}
     </div>
   );
 }

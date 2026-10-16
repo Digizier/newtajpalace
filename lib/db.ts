@@ -137,12 +137,44 @@ export async function getRoomCategoryBySlug(slug: string): Promise<RoomCategory 
   return data as RoomCategory;
 }
 
+export async function getFeaturedRoomCategories(): Promise<RoomCategory[]> {
+  try {
+    const { data, error } = await supabase
+      .from('room_categories')
+      .select('id, name, slug, short_desc, description, base_price, max_adults, max_children, bed_type, room_size, featured_image, gallery_images, video_url, status, amenities, is_featured, is_active, display_order')
+      .eq('is_active', true)
+      .eq('is_featured', true)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching featured rooms:', error);
+      const fallback = await getRoomCategories(1, 8);
+      return fallback.data;
+    }
+
+    if (data && data.length > 0) {
+      return data as RoomCategory[];
+    }
+
+    // If none explicitly marked as featured, fallback to first active rooms
+    const fallback = await getRoomCategories(1, 8);
+    return fallback.data;
+  } catch (err) {
+    console.error('Exception fetching featured rooms:', err);
+    return [];
+  }
+}
+
 export async function saveRoomCategory(room: Partial<RoomCategory>): Promise<RoomCategory> {
   const payload = {
     ...room,
     gallery_images: Array.isArray(room.gallery_images) ? room.gallery_images : [],
     video_url: room.video_url || '',
     status: room.status || 'available',
+    amenities: Array.isArray(room.amenities) ? room.amenities : [],
+    is_featured: room.is_featured === true,
+    max_adults: Number(room.max_adults) || 2,
+    max_children: Number(room.max_children) || 0,
   };
 
   if (room.id) {

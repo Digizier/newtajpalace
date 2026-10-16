@@ -30,7 +30,8 @@ import {
   Building2,
   Video,
   Film,
-  Wrench
+  Wrench,
+  Sparkles
 } from 'lucide-react';
 import InvoiceSlip from '@/components/InvoiceSlip';
 import { 
@@ -112,12 +113,30 @@ export default function AdminPortalPage() {
 
   // Active Edit Items for Modals
   const [editRoom, setEditRoom] = useState<Partial<RoomCategory> | null>(null);
+  const [customAmenityInput, setCustomAmenityInput] = useState('');
   const [editMeal, setEditMeal] = useState<Partial<MealAddon> | null>(null);
   const [editBanner, setEditBanner] = useState<Partial<HeroBanner> | null>(null);
   const [editPromo, setEditPromo] = useState<Partial<PromoCode> | null>(null);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [printBooking, setPrintBooking] = useState<Booking | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  const PRESET_AMENITIES = [
+    'Free High-Speed Wi-Fi',
+    'Inverter AC & Heating',
+    'En-Suite Private Bathroom',
+    '43" Smart LED TV',
+    '24/7 Room Service',
+    'Electric Kettle & Tea Set',
+    'Hot Water Geyser',
+    'Mini Refrigerator',
+    'Executive Work Desk',
+    'Complimentary Toiletries',
+    'Soundproof Glazing',
+    'Intercom Telephone',
+    'Daily Housekeeping',
+    'Wardrobe & Clothes Rack'
+  ];
 
   // Show Toast
   const showToast = (msg: string) => {
@@ -720,22 +739,26 @@ export default function AdminPortalPage() {
               <span className="text-xs text-neutral-400">Manage all room types, descriptions, base prices, gallery photos, and walkthrough videos.</span>
               <button
                 type="button"
-                onClick={() => setEditRoom({
-                  name: '',
-                  slug: '',
-                  base_price: 4500,
-                  max_adults: 2,
-                  max_children: 1,
-                  bed_type: 'King Bed',
-                  room_size: '300 sq ft',
-                  short_desc: '',
-                  description: '',
-                  status: 'available',
-                  gallery_images: [],
-                  video_url: '',
-                  amenities: ['Free Wi-Fi', 'Inverter AC', 'Attached Bath'],
-                  is_active: true
-                })}
+                onClick={() => {
+                  setCustomAmenityInput('');
+                  setEditRoom({
+                    name: '',
+                    slug: '',
+                    base_price: 4500,
+                    max_adults: 2,
+                    max_children: 1,
+                    bed_type: 'King Bed',
+                    room_size: '300 sq ft',
+                    short_desc: '',
+                    description: '',
+                    status: 'available',
+                    gallery_images: [],
+                    video_url: '',
+                    amenities: ['Free High-Speed Wi-Fi', 'Inverter AC & Heating', 'En-Suite Private Bathroom', '43" Smart LED TV'],
+                    is_featured: false,
+                    is_active: true
+                  });
+                }}
                 className="bg-gold-500 hover:bg-gold-600 text-neutral-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center space-x-1.5 shadow-sm active:scale-95 transition-all"
               >
                 <Plus className="w-4 h-4" />
@@ -765,8 +788,8 @@ export default function AdminPortalPage() {
                           Rs. {room.base_price.toLocaleString()} / nt
                         </div>
 
-                        {/* Availability Status Badge */}
-                        <div className="absolute top-2 left-2">
+                        {/* Availability Status & Featured Badges */}
+                        <div className="absolute top-2 left-2 flex flex-col space-y-1">
                           {roomStatus === 'available' && (
                             <span className="inline-flex items-center space-x-1 bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -783,6 +806,12 @@ export default function AdminPortalPage() {
                             <span className="inline-flex items-center space-x-1 bg-neutral-900/90 border border-neutral-600 text-neutral-300 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm">
                               <Wrench className="w-3 h-3 text-neutral-400" />
                               <span>Maintenance</span>
+                            </span>
+                          )}
+                          {room.is_featured && (
+                            <span className="inline-flex items-center space-x-1 bg-gold-500/95 text-neutral-950 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider shadow">
+                              <Sparkles className="w-2.5 h-2.5" />
+                              <span>Featured</span>
                             </span>
                           )}
                         </div>
@@ -805,8 +834,10 @@ export default function AdminPortalPage() {
                       <h3 className="font-serif text-lg font-bold text-white">{room.name}</h3>
                       <p className="text-xs text-neutral-400 line-clamp-2 mt-1 leading-relaxed">{room.short_desc}</p>
                       
-                      <div className="text-xs text-neutral-400 mt-2 flex items-center space-x-2">
-                        <span>Max {room.max_adults} Adults</span>
+                      <div className="text-xs text-neutral-400 mt-2 flex flex-wrap items-center gap-1.5">
+                        <span className="font-semibold text-neutral-200">Max {room.max_adults} Adults</span>
+                        <span className="text-neutral-600">•</span>
+                        <span className="font-semibold text-neutral-200">{room.max_children || 0} Kids</span>
                         <span className="text-neutral-600">•</span>
                         <span>{room.bed_type}</span>
                         {room.room_size && (
@@ -816,17 +847,39 @@ export default function AdminPortalPage() {
                           </>
                         )}
                       </div>
+
+                      {Array.isArray(room.amenities) && room.amenities.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2.5">
+                          {room.amenities.slice(0, 3).map((amenity, i) => (
+                            <span key={i} className="text-[10px] bg-neutral-800 text-neutral-300 px-2 py-0.5 rounded-md border border-neutral-700/60">
+                              {amenity}
+                            </span>
+                          ))}
+                          {room.amenities.length > 3 && (
+                            <span className="text-[10px] bg-neutral-800 text-gold-400 px-1.5 py-0.5 rounded-md border border-neutral-700/60 font-semibold">
+                              +{room.amenities.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="pt-3 border-t border-neutral-800 flex items-center justify-between">
                       <button
                         type="button"
-                        onClick={() => setEditRoom({
-                          ...room,
-                          status: room.status || 'available',
-                          gallery_images: Array.isArray(room.gallery_images) ? room.gallery_images : [],
-                          video_url: room.video_url || ''
-                        })}
+                        onClick={() => {
+                          setCustomAmenityInput('');
+                          setEditRoom({
+                            ...room,
+                            status: room.status || 'available',
+                            gallery_images: Array.isArray(room.gallery_images) ? room.gallery_images : [],
+                            video_url: room.video_url || '',
+                            amenities: Array.isArray(room.amenities) ? room.amenities : [],
+                            is_featured: room.is_featured === true,
+                            max_adults: Number(room.max_adults) || 2,
+                            max_children: Number(room.max_children) || 0
+                          });
+                        }}
                         className="px-3.5 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-bold text-white flex items-center space-x-1.5 transition-colors"
                       >
                         <Pencil className="w-3.5 h-3.5 text-gold-400" />
@@ -945,6 +998,30 @@ export default function AdminPortalPage() {
                           </div>
                         </label>
                       </div>
+                    </div>
+
+                    {/* Featured on Homepage Toggle */}
+                    <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800 flex items-center justify-between">
+                      <div className="pr-4">
+                        <div className="flex items-center space-x-2">
+                          <Sparkles className="w-4 h-4 text-gold-400" />
+                          <span className="text-xs font-bold text-white block">
+                            Show in Featured Room Suites on Homepage
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-neutral-400 block mt-0.5">
+                          When checked, this suite will automatically appear in the Featured Room Suites showcase on the home page.
+                        </span>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={editRoom.is_featured === true}
+                          onChange={(e) => setEditRoom({ ...editRoom, is_featured: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold-500"></div>
+                      </label>
                     </div>
 
                     {/* 2. Featured Image & Multiple Gallery Upload */}
@@ -1073,7 +1150,7 @@ export default function AdminPortalPage() {
                     </div>
 
                     {/* 5. Pricing, Capacity & Specs */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                       <div>
                         <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-1">Base Rate (Rs.)</label>
                         <input
@@ -1087,13 +1164,24 @@ export default function AdminPortalPage() {
                         <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-1">Max Adults</label>
                         <input
                           type="number"
+                          min="1"
                           value={editRoom.max_adults || 2}
                           onChange={(e) => setEditRoom({ ...editRoom, max_adults: Number(e.target.value) })}
-                          className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
+                          className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white font-semibold"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-1">Bed Configuration</label>
+                        <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-1">Max Kids</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={editRoom.max_children ?? 0}
+                          onChange={(e) => setEditRoom({ ...editRoom, max_children: Number(e.target.value) })}
+                          className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-1">Bed Setup</label>
                         <input
                           type="text"
                           value={editRoom.bed_type || 'King Bed'}
@@ -1110,6 +1198,118 @@ export default function AdminPortalPage() {
                           placeholder="e.g. 320 sq ft"
                           className="w-full bg-neutral-950 border border-neutral-700 rounded-xl p-2.5 text-xs text-white"
                         />
+                      </div>
+                    </div>
+
+                    {/* 6. Included Room Amenities Manager */}
+                    <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <label className="text-xs font-bold text-neutral-300 uppercase tracking-wider block">
+                          Included Room Amenities ({Array.isArray(editRoom.amenities) ? editRoom.amenities.length : 0})
+                        </label>
+                        <span className="text-[11px] text-neutral-400">Click presets to toggle or add custom below</span>
+                      </div>
+
+                      {/* Active Amenities Badges */}
+                      {Array.isArray(editRoom.amenities) && editRoom.amenities.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 p-3 rounded-xl bg-neutral-900 border border-neutral-800">
+                          {editRoom.amenities.map((item, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center space-x-1.5 bg-neutral-800 border border-gold-500/40 text-gold-300 text-xs px-2.5 py-1 rounded-lg"
+                            >
+                              <span>{item}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = (editRoom.amenities || []).filter((_, i) => i !== idx);
+                                  setEditRoom({ ...editRoom, amenities: updated });
+                                }}
+                                className="text-neutral-400 hover:text-red-400 transition-colors ml-1"
+                                title="Remove amenity"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-3 text-center text-xs text-neutral-400 bg-neutral-900 rounded-xl border border-dashed border-neutral-800">
+                          No amenities selected yet. Choose from quick presets below or type custom.
+                        </div>
+                      )}
+
+                      {/* Preset Quick Toggles */}
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mb-1.5">
+                          Quick Presets:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {PRESET_AMENITIES.map((preset) => {
+                            const isSelected = (editRoom.amenities || []).includes(preset);
+                            return (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={() => {
+                                  const current = editRoom.amenities || [];
+                                  if (isSelected) {
+                                    setEditRoom({ ...editRoom, amenities: current.filter(a => a !== preset) });
+                                  } else {
+                                    setEditRoom({ ...editRoom, amenities: [...current, preset] });
+                                  }
+                                }}
+                                className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-all ${
+                                  isSelected
+                                    ? 'bg-gold-500/20 border-gold-500 text-gold-300 font-bold'
+                                    : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700'
+                                }`}
+                              >
+                                {isSelected ? '✓ ' : '+ '}{preset}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Custom Amenity Adder */}
+                      <div className="flex items-center space-x-2 pt-1">
+                        <input
+                          type="text"
+                          placeholder="Type custom amenity (e.g. Balcony with View, Jacuzzi, Hair Dryer)..."
+                          value={customAmenityInput}
+                          onChange={(e) => setCustomAmenityInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (customAmenityInput.trim()) {
+                                const trimmed = customAmenityInput.trim();
+                                const current = editRoom.amenities || [];
+                                if (!current.includes(trimmed)) {
+                                  setEditRoom({ ...editRoom, amenities: [...current, trimmed] });
+                                }
+                                setCustomAmenityInput('');
+                              }
+                            }
+                          }}
+                          className="flex-1 bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-gold-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (customAmenityInput.trim()) {
+                              const trimmed = customAmenityInput.trim();
+                              const current = editRoom.amenities || [];
+                              if (!current.includes(trimmed)) {
+                                setEditRoom({ ...editRoom, amenities: [...current, trimmed] });
+                              }
+                              setCustomAmenityInput('');
+                            }
+                          }}
+                          className="bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-gold-400 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0"
+                        >
+                          + Add
+                        </button>
                       </div>
                     </div>
 

@@ -23,13 +23,14 @@ import {
   Eye
 } from 'lucide-react';
 import HeroBannerSection from '@/components/HeroBanner';
-import { getRoomCategories, getFAQs, getGalleryItems } from '@/lib/db';
+import { getFeaturedRoomCategories, getRoomCategories, getFAQs, getGalleryItems } from '@/lib/db';
 import type { RoomCategory, FAQ, GalleryItem } from '@/lib/types';
 import { RoomCardSkeleton } from '@/components/Shimmer';
 import RoomDetailsModal from '@/components/RoomDetailsModal';
 
 export default function HomePage() {
   const [featuredRooms, setFeaturedRooms] = useState<RoomCategory[]>([]);
+  const [totalRoomCount, setTotalRoomCount] = useState<number>(8);
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryItem[]>([]);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
@@ -38,12 +39,14 @@ export default function HomePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [roomsRes, galleryRes, faqsRes] = await Promise.all([
-          getRoomCategories(1, 4), // fetch 4 featured suites for home
+        const [featuredRes, allRoomsRes, galleryRes, faqsRes] = await Promise.all([
+          getFeaturedRoomCategories(),
+          getRoomCategories(1, 1),
           getGalleryItems(),
           getFAQs()
         ]);
-        setFeaturedRooms(roomsRes.data || []);
+        setFeaturedRooms(featuredRes || []);
+        setTotalRoomCount(allRoomsRes?.count || featuredRes?.length || 8);
         setGalleryPhotos((galleryRes || []).slice(0, 6));
         setFaqs((faqsRes || []).slice(0, 5));
       } catch (err) {
@@ -141,7 +144,7 @@ export default function HomePage() {
             href="/rooms"
             className="inline-flex items-center space-x-2 text-gold-700 hover:text-gold-800 font-bold text-sm mt-3 md:mt-0 transition-colors"
           >
-            <span>View All 8 Room Categories</span>
+            <span>View All {totalRoomCount} Room Categories</span>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
@@ -230,11 +233,13 @@ export default function HomePage() {
                       {room.short_desc}
                     </p>
 
-                    <div className="flex items-center space-x-3 text-xs text-neutral-600 mt-3 pt-3 border-t border-neutral-100">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-600 mt-3 pt-3 border-t border-neutral-100">
                       <div className="flex items-center space-x-1">
                         <Users className="w-3.5 h-3.5 text-gold-600" />
-                        <span>Up to {room.max_adults} Adults</span>
+                        <span>Max {room.max_adults} Adults</span>
                       </div>
+                      <span className="text-neutral-300">•</span>
+                      <span>{room.max_children || 0} Kids</span>
                       <span className="text-neutral-300">•</span>
                       <span>{room.bed_type}</span>
                     </div>

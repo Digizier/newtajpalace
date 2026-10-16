@@ -207,11 +207,13 @@ export default function RoomsPage() {
                       {room.short_desc}
                     </p>
 
-                    <div className="flex items-center space-x-3 text-xs text-neutral-600 mt-3 pt-3 border-t border-neutral-100">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-600 mt-3 pt-3 border-t border-neutral-100">
                       <div className="flex items-center space-x-1">
                         <Users className="w-3.5 h-3.5 text-gold-600" />
-                        <span>{room.max_adults} Adults</span>
+                        <span>Max {room.max_adults} Adults</span>
                       </div>
+                      <span className="text-neutral-300">•</span>
+                      <span>{room.max_children || 0} Kids</span>
                       <span className="text-neutral-300">•</span>
                       <span>{room.bed_type}</span>
                     </div>

@@ -19,7 +19,8 @@ import {
   Sparkles, 
   AlertCircle,
   FileText,
-  Printer
+  Printer,
+  X
 } from 'lucide-react';
 import InvoiceSlip from '@/components/InvoiceSlip';
 import { 
@@ -91,6 +92,7 @@ function BookingEngineContent() {
   const [submittingBooking, setSubmittingBooking] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [showInvoiceSlipModal, setShowInvoiceSlipModal] = useState(false);
 
   // Load initial data from Supabase
   useEffect(() => {
@@ -327,9 +329,9 @@ function BookingEngineContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Main Workflow Form Area (8 cols) */}
-        <div className="lg:col-span-8 bg-white rounded-3xl p-6 sm:p-8 border border-neutral-100 shadow-sm">
+      <div className={`grid grid-cols-1 ${currentPhase === 6 ? 'max-w-4xl mx-auto' : 'lg:grid-cols-12'} gap-8 items-start`}>
+        {/* Main Workflow Form Area */}
+        <div className={`${currentPhase === 6 ? 'w-full' : 'lg:col-span-8'} bg-white rounded-3xl p-6 sm:p-8 border border-neutral-100 shadow-sm`}>
           {/* ========================================================= */}
           {/* PHASE 1: Room Selection & Date Availability */}
           {/* ========================================================= */}
@@ -978,48 +980,107 @@ function BookingEngineContent() {
                 <CheckCircle2 className="w-10 h-10" />
               </div>
 
-              <div className="no-print">
+              <div className="no-print space-y-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">
-                  Reservation Request Received
+                  Reservation Successfully Registered
                 </span>
-                <h2 className="font-serif text-3xl font-bold text-neutral-900 mt-1">
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-neutral-900">
                   Thank You, {createdBooking.guest_name}!
                 </h2>
-                <p className="text-sm text-neutral-600 max-w-md mx-auto mt-2">
-                  Your booking reference is <strong className="text-gold-700 font-mono text-base">{createdBooking.reference}</strong>. We have logged your request in our reservations system.
+                <p className="text-xs sm:text-sm text-neutral-600 max-w-lg mx-auto">
+                  Your official reservation reference is <strong className="text-gold-700 font-mono text-base">{createdBooking.reference}</strong>. Your printable confirmation slip has been generated below.
                 </p>
               </div>
-
-              {/* Printable Invoice Slip Component */}
-              <InvoiceSlip booking={createdBooking} hotelSettings={hotelSettings} />
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2 no-print">
                 <button
                   type="button"
+                  onClick={() => setShowInvoiceSlipModal(true)}
+                  className="bg-gold-500 hover:bg-gold-600 text-neutral-950 font-bold px-6 py-3 rounded-xl text-xs flex items-center space-x-2 shadow-md active:scale-95 transition-all"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>View & Print Official Slip</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => window.print()}
-                  className="bg-charcoal hover:bg-neutral-800 text-white font-bold px-6 py-3 rounded-xl text-xs flex items-center space-x-2 shadow-sm active:scale-95 transition-all"
+                  className="bg-neutral-900 hover:bg-neutral-800 text-white font-bold px-5 py-3 rounded-xl text-xs flex items-center space-x-2 shadow-sm active:scale-95 transition-all"
                 >
                   <Printer className="w-4 h-4" />
-                  <span>Print Booking Slip</span>
+                  <span>Print Slip Directly</span>
                 </button>
 
                 <a
                   href={`https://wa.me/923224845461?text=${encodeURIComponent(`Hello New Taj Palace Hotel! I have submitted booking reference ${createdBooking.reference} for ${createdBooking.guest_name}.`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl text-xs flex items-center space-x-2 shadow-sm active:scale-95 transition-all"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-3 rounded-xl text-xs flex items-center space-x-2 shadow-sm active:scale-95 transition-all"
                 >
-                  <span>Notify Hotel on WhatsApp</span>
+                  <span>Notify on WhatsApp</span>
                 </a>
 
                 <Link
                   href="/"
-                  className="bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-semibold px-6 py-3 rounded-xl text-xs transition-all"
+                  className="bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-semibold px-5 py-3 rounded-xl text-xs transition-all"
                 >
                   Return to Home
                 </Link>
               </div>
+
+              {/* Printable Invoice Slip Component */}
+              <div className="pt-4">
+                <InvoiceSlip booking={createdBooking} hotelSettings={hotelSettings} />
+              </div>
+
+              {/* Dedicated Invoice Slip Modal for isolated view */}
+              {showInvoiceSlipModal && (
+                <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto no-print">
+                  <div className="bg-neutral-900 border border-neutral-700 rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col my-auto shadow-2xl overflow-hidden p-0">
+                    <div className="p-4 sm:p-5 border-b border-neutral-800 flex flex-wrap items-center justify-between gap-3 bg-neutral-900 shrink-0">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gold-400 block">Official Hotel Voucher</span>
+                        <h3 className="font-serif font-bold text-white text-base sm:text-lg">
+                          Reservation Voucher #{createdBooking.reference}
+                        </h3>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => window.print()}
+                          className="bg-gold-500 hover:bg-gold-600 text-neutral-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center space-x-1.5 shadow-md active:scale-95 transition-all"
+                        >
+                          <Printer className="w-4 h-4" />
+                          <span>Print Slip Now</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowInvoiceSlipModal(false)}
+                          className="text-neutral-400 hover:text-white p-2 rounded-xl border border-neutral-700 hover:bg-neutral-800 transition-colors"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-3 sm:p-6 overflow-y-auto flex-1 bg-neutral-950">
+                      <InvoiceSlip booking={createdBooking} hotelSettings={hotelSettings} />
+                    </div>
+
+                    <div className="p-4 border-t border-neutral-800 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-400 bg-neutral-900 shrink-0">
+                      <span className="text-[11px]">Only the official reservation voucher slip will be printed. Zero website background information.</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowInvoiceSlipModal(false)}
+                        className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold transition-colors"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1027,92 +1088,94 @@ function BookingEngineContent() {
         {/* ========================================================= */}
         {/* Right Sticky Sidebar: Real-Time Summary Tracking */}
         {/* ========================================================= */}
-        <div className="lg:col-span-4 sticky top-28 bg-white rounded-3xl p-6 sm:p-7 border border-neutral-100 shadow-xl space-y-5 no-print">
-          <div className="pb-4 border-b border-neutral-100">
-            <span className="text-xs uppercase tracking-wider text-gold-600 font-bold block mb-1">
-              Reservation Summary
-            </span>
-            <h3 className="font-serif text-xl font-bold text-neutral-900">
-              {selectedRoom ? selectedRoom.name : 'Choose a Suite'}
-            </h3>
-          </div>
-
-          <div className="space-y-3 text-xs text-neutral-600">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center space-x-1.5 text-neutral-500">
-                <Calendar className="w-3.5 h-3.5 text-gold-500" />
-                <span>Dates:</span>
+        {currentPhase !== 6 && (
+          <div className="lg:col-span-4 sticky top-28 bg-white rounded-3xl p-6 sm:p-7 border border-neutral-100 shadow-xl space-y-5 no-print">
+            <div className="pb-4 border-b border-neutral-100">
+              <span className="text-xs uppercase tracking-wider text-gold-600 font-bold block mb-1">
+                Reservation Summary
               </span>
-              <span className="font-bold text-neutral-900">{checkIn} to {checkOut}</span>
+              <h3 className="font-serif text-xl font-bold text-neutral-900">
+                {selectedRoom ? selectedRoom.name : 'Choose a Suite'}
+              </h3>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="flex items-center space-x-1.5 text-neutral-500">
-                <Clock className="w-3.5 h-3.5 text-gold-500" />
-                <span>Duration:</span>
-              </span>
-              <span className="font-bold text-neutral-900">{nights} Night{nights > 1 ? 's' : ''}</span>
+            <div className="space-y-3 text-xs text-neutral-600">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center space-x-1.5 text-neutral-500">
+                  <Calendar className="w-3.5 h-3.5 text-gold-500" />
+                  <span>Dates:</span>
+                </span>
+                <span className="font-bold text-neutral-900">{checkIn} to {checkOut}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="flex items-center space-x-1.5 text-neutral-500">
+                  <Clock className="w-3.5 h-3.5 text-gold-500" />
+                  <span>Duration:</span>
+                </span>
+                <span className="font-bold text-neutral-900">{nights} Night{nights > 1 ? 's' : ''}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="flex items-center space-x-1.5 text-neutral-500">
+                  <Users className="w-3.5 h-3.5 text-gold-500" />
+                  <span>Guests:</span>
+                </span>
+                <span className="font-bold text-neutral-900">{adults} Adults, {children} Kids</span>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="flex items-center space-x-1.5 text-neutral-500">
-                <Users className="w-3.5 h-3.5 text-gold-500" />
-                <span>Guests:</span>
-              </span>
-              <span className="font-bold text-neutral-900">{adults} Adults, {children} Kids</span>
-            </div>
-          </div>
-
-          {/* Pricing Breakdown */}
-          <div className="pt-4 border-t border-neutral-100 space-y-2 text-xs">
-            <div className="flex justify-between text-neutral-600">
-              <span>Room Total:</span>
-              <span className="font-semibold text-neutral-900">Rs. {roomTotal.toLocaleString()}</span>
-            </div>
-
-            {addonsTotal > 0 && (
+            {/* Pricing Breakdown */}
+            <div className="pt-4 border-t border-neutral-100 space-y-2 text-xs">
               <div className="flex justify-between text-neutral-600">
-                <span>Meal Add-ons & Extras:</span>
-                <span className="font-semibold text-neutral-900">Rs. {addonsTotal.toLocaleString()}</span>
+                <span>Room Total:</span>
+                <span className="font-semibold text-neutral-900">Rs. {roomTotal.toLocaleString()}</span>
               </div>
-            )}
 
-            {discountTotal > 0 && (
-              <div className="flex justify-between text-emerald-600 font-semibold">
-                <span>Discount Applied:</span>
-                <span>- Rs. {discountTotal.toLocaleString()}</span>
+              {addonsTotal > 0 && (
+                <div className="flex justify-between text-neutral-600">
+                  <span>Meal Add-ons & Extras:</span>
+                  <span className="font-semibold text-neutral-900">Rs. {addonsTotal.toLocaleString()}</span>
+                </div>
+              )}
+
+              {discountTotal > 0 && (
+                <div className="flex justify-between text-emerald-600 font-semibold">
+                  <span>Discount Applied:</span>
+                  <span>- Rs. {discountTotal.toLocaleString()}</span>
+                </div>
+              )}
+
+              <div className="pt-3 border-t border-neutral-200 flex justify-between items-baseline">
+                <span className="text-sm font-bold text-neutral-900">Grand Total:</span>
+                <span className="font-serif text-2xl font-bold text-gold-600">
+                  Rs. {grandTotal.toLocaleString()}
+                </span>
               </div>
-            )}
 
-            <div className="pt-3 border-t border-neutral-200 flex justify-between items-baseline">
-              <span className="text-sm font-bold text-neutral-900">Grand Total:</span>
-              <span className="font-serif text-2xl font-bold text-gold-600">
-                Rs. {grandTotal.toLocaleString()}
-              </span>
+              {currentPhase >= 4 && (
+                <div className="p-3 bg-neutral-50 rounded-xl space-y-1 text-[11px] text-neutral-600 mt-2">
+                  <div className="flex justify-between">
+                    <span>Payable Now:</span>
+                    <span className="font-bold text-neutral-900">Rs. {payableNow.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Due at Check-in:</span>
+                    <span className="font-bold text-neutral-900">Rs. {dueAtCheckin.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {currentPhase >= 4 && (
-              <div className="p-3 bg-neutral-50 rounded-xl space-y-1 text-[11px] text-neutral-600 mt-2">
-                <div className="flex justify-between">
-                  <span>Payable Now:</span>
-                  <span className="font-bold text-neutral-900">Rs. {payableNow.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Due at Check-in:</span>
-                  <span className="font-bold text-neutral-900">Rs. {dueAtCheckin.toLocaleString()}</span>
-                </div>
-              </div>
-            )}
+            <div className="pt-2 text-[11px] text-neutral-400 leading-snug space-y-1">
+              <p className="flex items-center space-x-1 text-emerald-600 font-medium">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Free cancellation up to 24h prior</span>
+              </p>
+              <p>• Location: Opposite City Bus Terminal, Bund Road</p>
+            </div>
           </div>
-
-          <div className="pt-2 text-[11px] text-neutral-400 leading-snug space-y-1">
-            <p className="flex items-center space-x-1 text-emerald-600 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Free cancellation up to 24h prior</span>
-            </p>
-            <p>• Location: Opposite City Bus Terminal, Bund Road</p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -29,12 +29,12 @@ export default function InvoiceSlip({ booking, hotelSettings }: InvoiceSlipProps
   return (
     <div
       id="printable-invoice"
-      className="bg-white text-neutral-900 p-6 sm:p-8 rounded-2xl border border-neutral-300 shadow-sm max-w-2xl mx-auto space-y-6 print:border-none print:shadow-none print:p-0 print:m-0 print:max-w-none text-left"
+      className="bg-white text-neutral-900 p-4 sm:p-8 rounded-2xl border border-neutral-300 shadow-sm w-full max-w-2xl mx-auto space-y-5 print:border-none print:shadow-none print:p-0 print:m-0 print:max-w-none text-left"
     >
       {/* 1. Official Header */}
-      <div className="flex items-start justify-between border-b-2 border-neutral-800 pb-5">
-        <div className="flex items-center space-x-3.5">
-          <div className="w-14 h-14 rounded-xl border border-neutral-200 flex items-center justify-center p-1 bg-neutral-50 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b-2 border-neutral-800 pb-5">
+        <div className="flex items-start space-x-3.5">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-neutral-200 flex items-center justify-center p-1 bg-neutral-50 flex-shrink-0">
             <img
               src="/logo.png"
               alt={hotelName}
@@ -42,26 +42,26 @@ export default function InvoiceSlip({ booking, hotelSettings }: InvoiceSlipProps
             />
           </div>
           <div>
-            <h2 className="font-serif text-xl sm:text-2xl font-black tracking-tight text-neutral-950 uppercase">
+            <h2 className="font-serif text-lg sm:text-2xl font-black tracking-tight text-neutral-950 uppercase leading-tight">
               {hotelName}
             </h2>
-            <p className="text-[11px] sm:text-xs text-neutral-600 font-medium leading-snug max-w-sm">
+            <p className="text-[11px] sm:text-xs text-neutral-600 font-medium leading-snug max-w-sm mt-0.5">
               {hotelAddress}
             </p>
-            <p className="text-[11px] text-neutral-600 mt-0.5">
+            <p className="text-[11px] text-neutral-600 mt-1">
               <span className="font-semibold">Helpline:</span> {hotelPhone} • <span className="font-semibold">WhatsApp:</span> +{hotelWhatsapp}
             </p>
           </div>
         </div>
 
-        <div className="text-right">
-          <span className="inline-block bg-neutral-950 text-gold-400 font-bold text-[10px] sm:text-xs uppercase px-2.5 py-1 rounded tracking-wider mb-1">
+        <div className="sm:text-right border-t sm:border-t-0 pt-3 sm:pt-0 border-neutral-100 flex sm:flex-col justify-between items-center sm:items-end">
+          <span className="inline-block bg-neutral-950 text-gold-400 font-bold text-[10px] sm:text-xs uppercase px-2.5 py-1 rounded tracking-wider mb-0.5">
             Reservation Voucher
           </span>
           <div className="font-mono font-bold text-sm sm:text-base text-neutral-950">
             {booking.reference}
           </div>
-          <div className="text-[11px] text-neutral-500 mt-0.5">
+          <div className="text-[10px] sm:text-[11px] text-neutral-500">
             Date: {issueDate}
           </div>
         </div>

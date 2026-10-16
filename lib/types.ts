@@ -10,6 +10,9 @@ export interface RoomCategory {
   bed_type: string;
   room_size: string;
   featured_image: string;
+  gallery_images?: string[];
+  video_url?: string;
+  status?: 'available' | 'occupied' | 'maintenance';
   amenities: string[];
   is_featured: boolean;
   is_active: boolean;

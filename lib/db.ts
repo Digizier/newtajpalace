@@ -103,7 +103,7 @@ export async function getRoomCategories(page = 1, limit = 8): Promise<{ data: Ro
 
   const { data, error, count } = await supabase
     .from('room_categories')
-    .select('id, name, slug, short_desc, description, base_price, max_adults, max_children, bed_type, room_size, featured_image, amenities, is_featured, is_active, display_order', { count: 'exact' })
+    .select('id, name, slug, short_desc, description, base_price, max_adults, max_children, bed_type, room_size, featured_image, gallery_images, video_url, status, amenities, is_featured, is_active, display_order', { count: 'exact' })
     .eq('is_active', true)
     .order('display_order', { ascending: true })
     .range(from, to);
@@ -119,7 +119,7 @@ export async function getRoomCategories(page = 1, limit = 8): Promise<{ data: Ro
 export async function getAllAdminRoomCategories(): Promise<RoomCategory[]> {
   const { data, error } = await supabase
     .from('room_categories')
-    .select('id, name, slug, short_desc, description, base_price, max_adults, max_children, bed_type, room_size, featured_image, amenities, is_featured, is_active, display_order')
+    .select('id, name, slug, short_desc, description, base_price, max_adults, max_children, bed_type, room_size, featured_image, gallery_images, video_url, status, amenities, is_featured, is_active, display_order')
     .order('display_order', { ascending: true });
 
   if (error) throw error;
@@ -129,7 +129,7 @@ export async function getAllAdminRoomCategories(): Promise<RoomCategory[]> {
 export async function getRoomCategoryBySlug(slug: string): Promise<RoomCategory | null> {
   const { data, error } = await supabase
     .from('room_categories')
-    .select('id, name, slug, short_desc, description, base_price, max_adults, max_children, bed_type, room_size, featured_image, amenities, is_featured, is_active, display_order')
+    .select('id, name, slug, short_desc, description, base_price, max_adults, max_children, bed_type, room_size, featured_image, gallery_images, video_url, status, amenities, is_featured, is_active, display_order')
     .eq('slug', slug)
     .single();
 
@@ -138,10 +138,17 @@ export async function getRoomCategoryBySlug(slug: string): Promise<RoomCategory 
 }
 
 export async function saveRoomCategory(room: Partial<RoomCategory>): Promise<RoomCategory> {
+  const payload = {
+    ...room,
+    gallery_images: Array.isArray(room.gallery_images) ? room.gallery_images : [],
+    video_url: room.video_url || '',
+    status: room.status || 'available',
+  };
+
   if (room.id) {
     const { data, error } = await supabase
       .from('room_categories')
-      .update(room)
+      .update(payload)
       .eq('id', room.id)
       .select()
       .single();
@@ -150,7 +157,7 @@ export async function saveRoomCategory(room: Partial<RoomCategory>): Promise<Roo
   } else {
     const { data, error } = await supabase
       .from('room_categories')
-      .insert(room)
+      .insert(payload)
       .select()
       .single();
     if (error) throw error;

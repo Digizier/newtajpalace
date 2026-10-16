@@ -68,7 +68,7 @@
     overflow: visible !important;
   }
 
-  /* Hide entire website UI, navigation, headers, footers, sidebars */
+  /* Hide entire website UI, navigation, headers, footers, sidebars, floating widgets */
   header, footer, nav, aside,
   [data-mobile-navbar],
   [data-floating-whatsapp],
@@ -77,29 +77,31 @@
     visibility: hidden !important;
   }
 
-  /* Hide everything inside body except printable invoice container */
+  /* Hide everything inside body */
   body * {
     visibility: hidden;
   }
 
+  /* Make only the official printable voucher visible */
   #printable-invoice,
   #printable-invoice * {
     visibility: visible !important;
   }
 
   #printable-invoice {
-    position: absolute !important;
+    position: fixed !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 auto !important;
-    padding: 16px 20px !important;
+    margin: 0 !important;
+    padding: 12px 16px !important;
     border: 1px solid #d4d4d4 !important;
     box-shadow: none !important;
     background: #ffffff !important;
     color: #111111 !important;
     border-radius: 8px !important;
+    z-index: 999999 !important;
     page-break-after: avoid !important;
     page-break-inside: avoid !important;
   }

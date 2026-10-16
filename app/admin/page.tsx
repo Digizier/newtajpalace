@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { 
   Lock, 
@@ -131,6 +131,39 @@ export default function AdminPortalPage() {
   const [uploadingProof, setUploadingProof] = useState(false);
   const [editPhysicalRoom, setEditPhysicalRoom] = useState<Partial<PhysicalRoom> | null>(null);
 
+  // 10-Second Auto-Sync States & Notification Tracking
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+  const [isSilentSyncing, setIsSilentSyncing] = useState(false);
+  const [countdown, setCountdown] = useState(10);
+  const prevBookingsCountRef = useRef<number | null>(null);
+  const prevMessagesCountRef = useRef<number | null>(null);
+
+  // Activity Detection: Protect admin workflow from any sync interruption
+  const isUserBusy = Boolean(
+    editRoom ||
+    editMeal ||
+    editBanner ||
+    editPromo ||
+    editingBooking ||
+    printBooking ||
+    viewingProofBooking ||
+    editPhysicalRoom ||
+    deleteModal.isOpen ||
+    uploadingImage ||
+    uploadingProof ||
+    activeTab === 'settings'
+  );
+
+  const isBusyRef = useRef(isUserBusy);
+  useEffect(() => {
+    isBusyRef.current = isUserBusy;
+  }, [isUserBusy]);
+
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
   const PRESET_AMENITIES = [
     'Free High-Speed Wi-Fi',
     'Inverter AC & Heating',
@@ -179,10 +212,25 @@ export default function AdminPortalPage() {
     setIsAuthenticated(false);
   };
 
-  // Load Admin Data
-  const reloadData = async () => {
+  // Load Admin Data (Manual or Silent 10s Background Auto-Sync)
+  const reloadData = async (isBackground = false) => {
     if (!isAuthenticated) return;
-    setLoading(true);
+
+    // Safety checks for background sync: do not disturb active administrator
+    if (isBackground) {
+      if (isBusyRef.current) return;
+      if (typeof document !== 'undefined') {
+        if (document.hidden) return;
+        const activeTag = document.activeElement?.tagName?.toLowerCase();
+        if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+          return;
+        }
+      }
+      setIsSilentSyncing(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const [bData, rData, prData, mData, bnData, gData, pData, sData, msgData, proofsData] = await Promise.all([
         getAdminBookings(),
@@ -196,6 +244,23 @@ export default function AdminPortalPage() {
         getContactMessages(),
         getAllPaymentProofs()
       ]);
+
+      // If new bookings arrived during background sync, gently notify admin
+      if (isBackground && prevBookingsCountRef.current !== null && bData.length > prevBookingsCountRef.current) {
+        const diff = bData.length - prevBookingsCountRef.current;
+        const latestBooking = bData[0];
+        showToast(`🔔 ${diff} New Reservation received! #${latestBooking?.reference || ''} (${latestBooking?.guest_name || 'Guest'})`);
+      }
+      prevBookingsCountRef.current = bData.length;
+
+      // If new inquiry arrived
+      if (isBackground && prevMessagesCountRef.current !== null && msgData.length > prevMessagesCountRef.current) {
+        const diff = msgData.length - prevMessagesCountRef.current;
+        const latestMsg = msgData[0];
+        showToast(`💬 ${diff} New Inquiry received from ${latestMsg?.name || 'Guest'}!`);
+      }
+      prevMessagesCountRef.current = msgData.length;
+
       setBookings(bData);
       setRooms(rData);
       setPhysicalRooms(prData);
@@ -203,7 +268,12 @@ export default function AdminPortalPage() {
       setBanners(bnData);
       setGallery(gData);
       setPromos(pData);
-      setSettings(sData);
+
+      // Do NOT overwrite settings state while administrator is in the Settings tab
+      if (activeTabRef.current !== 'settings') {
+        setSettings(sData);
+      }
+
       setMessages(msgData);
 
       const proofsMap: Record<string, PaymentProof> = {};
@@ -213,10 +283,18 @@ export default function AdminPortalPage() {
         }
       });
       setProofs(proofsMap);
+
+      if (!isBackground) {
+        showToast('Cloud database refreshed successfully');
+      }
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
-      setLoading(false);
+      if (isBackground) {
+        setIsSilentSyncing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -225,6 +303,42 @@ export default function AdminPortalPage() {
       reloadData();
     }
   }, [isAuthenticated]);
+
+  // 10-Second Background Self-Refresh Timer with Non-Disturbance Protection
+  useEffect(() => {
+    if (!isAuthenticated || !autoSyncEnabled) return;
+
+    const timer = setInterval(() => {
+      // 1. If user is in modal, settings tab, or busy, hold countdown at 10
+      if (isBusyRef.current) {
+        setCountdown(10);
+        return;
+      }
+
+      // 2. If tab is hidden or typing in input/textarea/select, pause and hold countdown at 10
+      if (typeof document !== 'undefined') {
+        if (document.hidden) {
+          return;
+        }
+        const activeTag = document.activeElement?.tagName?.toLowerCase();
+        if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+          setCountdown(10);
+          return;
+        }
+      }
+
+      // 3. Decrement countdown
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          reloadData(true);
+          return 10;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isAuthenticated, autoSyncEnabled]);
 
   // Handle Image Upload with Automatic WebP Compression
   const handleFileUpload = async (file: File, callback: (url: string) => void) => {
@@ -448,14 +562,59 @@ export default function AdminPortalPage() {
             </h1>
           </div>
 
-          <button
-            onClick={reloadData}
-            disabled={loading}
-            className="self-start sm:self-auto inline-flex items-center space-x-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-neutral-700 px-4 py-2 rounded-xl text-xs font-semibold transition-all"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh Cloud DB</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+            {/* 10-Second Auto-Sync Status & Toggle Badge */}
+            <button
+              type="button"
+              onClick={() => setAutoSyncEnabled(prev => !prev)}
+              title={
+                !autoSyncEnabled
+                  ? 'Auto-sync is paused. Click to enable 10-second live background sync.'
+                  : isUserBusy
+                  ? 'Auto-sync paused while you are editing or updating settings.'
+                  : 'Auto-sync active every 10 seconds. Click to pause.'
+              }
+              className={`inline-flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                !autoSyncEnabled
+                  ? 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-600'
+                  : isUserBusy
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                  : isSilentSyncing
+                  ? 'bg-gold-500/15 border-gold-500/40 text-gold-300'
+                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${
+                !autoSyncEnabled
+                  ? 'bg-neutral-500'
+                  : isUserBusy
+                  ? 'bg-amber-400 animate-pulse'
+                  : isSilentSyncing
+                  ? 'bg-gold-400 animate-ping'
+                  : 'bg-emerald-400 animate-pulse'
+              }`} />
+              <span>
+                {!autoSyncEnabled
+                  ? 'Auto-Sync: Paused'
+                  : isUserBusy
+                  ? 'Auto-Sync: Paused (Active)'
+                  : isSilentSyncing
+                  ? 'Auto-Syncing Cloud...'
+                  : `Live Sync (${countdown}s)`}
+              </span>
+            </button>
+
+            {/* Manual Refresh Button */}
+            <button
+              onClick={() => reloadData(false)}
+              disabled={loading || isSilentSyncing}
+              title="Manually refresh all hotel data from cloud database"
+              className="inline-flex items-center space-x-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700 hover:border-gold-500/50 px-4 py-2 rounded-xl text-xs font-semibold transition-all shadow-sm active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading || isSilentSyncing ? 'animate-spin text-gold-400' : ''}`} />
+              <span>Refresh Cloud DB</span>
+            </button>
+          </div>
         </div>
 
         {/* ========================================================= */}

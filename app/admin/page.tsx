@@ -2344,6 +2344,93 @@ export default function AdminPortalPage() {
               </div>
             </div>
 
+            {/* Google SEO & Hotel Center Feeds Card */}
+            <div className="bg-neutral-950/70 border border-neutral-800 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+                <div className="flex items-center space-x-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <h4 className="font-serif font-bold text-white text-sm">Google SEO &amp; Hotel Feeds Engine</h4>
+                </div>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-gold-400 bg-gold-500/10 border border-gold-500/20 px-2.5 py-1 rounded-full">
+                  Live &amp; Verified
+                </span>
+              </div>
+
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                Use these verified XML endpoints to connect with <strong className="text-white">Google Search Console</strong> and <strong className="text-white">Google Hotel Center (Google Maps)</strong> for maximum direct guest bookings.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                {/* 1. Sitemap */}
+                <div className="p-3.5 bg-neutral-900 border border-neutral-800 rounded-xl space-y-1.5">
+                  <span className="text-[11px] font-bold text-gold-400 uppercase tracking-wider block">XML Search Sitemap</span>
+                  <p className="font-mono text-[11px] text-neutral-300 truncate">https://newtajpalace.com/sitemap.xml</p>
+                  <div className="flex items-center space-x-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText('https://newtajpalace.com/sitemap.xml');
+                        showToast('Sitemap URL copied to clipboard!');
+                      }}
+                      className="text-[10px] font-bold text-neutral-400 hover:text-white px-2 py-1 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors"
+                    >
+                      Copy URL
+                    </button>
+                    <a
+                      href="/sitemap.xml"
+                      target="_blank"
+                      className="text-[10px] font-bold text-gold-400 hover:text-gold-300 px-2 py-1 bg-gold-500/10 rounded-lg hover:bg-gold-500/20 transition-colors"
+                    >
+                      View XML
+                    </a>
+                  </div>
+                </div>
+
+                {/* 2. Hotel Feed */}
+                <div className="p-3.5 bg-neutral-900 border border-neutral-800 rounded-xl space-y-1.5">
+                  <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">Google Hotel Center Feed</span>
+                  <p className="font-mono text-[11px] text-neutral-300 truncate">https://newtajpalace.com/hotel-feed.xml</p>
+                  <div className="flex items-center space-x-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText('https://newtajpalace.com/hotel-feed.xml');
+                        showToast('Hotel Feed URL copied to clipboard!');
+                      }}
+                      className="text-[10px] font-bold text-neutral-400 hover:text-white px-2 py-1 bg-neutral-800 rounded-lg hover:bg-neutral-700 transition-colors"
+                    >
+                      Copy URL
+                    </button>
+                    <a
+                      href="/hotel-feed.xml"
+                      target="_blank"
+                      className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 px-2 py-1 bg-emerald-500/10 rounded-lg hover:bg-emerald-500/20 transition-colors"
+                    >
+                      View XML
+                    </a>
+                  </div>
+                </div>
+
+                {/* 3. Robots */}
+                <div className="p-3.5 bg-neutral-900 border border-neutral-800 rounded-xl space-y-1.5">
+                  <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider block">Robots Controller</span>
+                  <p className="font-mono text-[11px] text-neutral-300 truncate">https://newtajpalace.com/robots.txt</p>
+                  <div className="flex items-center space-x-2 pt-1">
+                    <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg">
+                      Admin Protected
+                    </span>
+                    <a
+                      href="/robots.txt"
+                      target="_blank"
+                      className="text-[10px] font-bold text-blue-400 hover:text-blue-300 px-2 py-1 bg-blue-500/10 rounded-lg hover:bg-blue-500/20 transition-colors"
+                    >
+                      View TXT
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="pt-4 border-t border-neutral-800 flex justify-end">
               <button
                 type="button"

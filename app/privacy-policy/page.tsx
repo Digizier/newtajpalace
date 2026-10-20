@@ -3,6 +3,10 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy | New Taj Palace Hotel Lahore',
+  description: 'How New Taj Palace Hotel, Lahore protects, uses, and safeguards your personal data, contact numbers, and reservation information.',
+  alternates: {
+    canonical: 'https://newtajpalace.com/privacy-policy',
+  },
 };
 
 export default function PrivacyPolicyPage() {

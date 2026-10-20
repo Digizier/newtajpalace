@@ -1,0 +1,43 @@
+# Robots.txt for New Taj Palace Hotel, Lahore
+# Official Website: https://newtajpalace.com
+
+User-agent: *
+Allow: /
+Allow: /rooms/
+Allow: /pricing/
+Allow: /gallery/
+Allow: /about/
+Allow: /contact/
+Allow: /faq/
+Allow: /book/
+Allow: /voucher/
+Allow: /images/
+
+# Disallow Private Administrative Area
+Disallow: /admin/
+Disallow: /admin
+Disallow: /book/confirmation/
+
+# AI Search Engines & Answer Engines (AEO / GEO)
+User-agent: GPTBot
+Allow: /
+Disallow: /admin/
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin/
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /admin/
+
+# Sitemaps & Feeds
+Sitemap: https://newtajpalace.com/sitemap.xml

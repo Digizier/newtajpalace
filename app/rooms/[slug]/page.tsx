@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { getRoomCategoryBySlug, getAllAdminRoomCategories } from '@/lib/db';
 import type { Metadata } from 'next';
+import JsonLd from '@/components/JsonLd';
 
 interface RoomPageProps {
   params: Promise<{ slug: string }>;
@@ -40,11 +41,28 @@ export async function generateMetadata({ params }: RoomPageProps): Promise<Metad
   const { slug } = await params;
   const room = await getRoomCategoryBySlug(slug);
   if (!room) {
-    return { title: 'Room Not Found | New Taj Palace Hotel' };
+    return { title: 'Room Not Found | New Taj Palace Hotel Lahore' };
   }
+  const pageUrl = `https://newtajpalace.com/rooms/${slug}`;
+  const imageUrl = room.featured_image || '/images/rooms/room-2.webp';
   return {
     title: `${room.name} | New Taj Palace Hotel Lahore`,
-    description: room.short_desc,
+    description: `${room.short_desc} Book ${room.name} at New Taj Palace Hotel on Bund Road, Lahore. Features AC, free Wi-Fi, private bath, and 24/7 room service from PKR ${room.base_price.toLocaleString()}/night.`,
+    alternates: {
+      canonical: pageUrl,
+    },
+    openGraph: {
+      title: `${room.name} | New Taj Palace Hotel Lahore`,
+      description: room.short_desc,
+      url: pageUrl,
+      images: [{ url: imageUrl, width: 1200, height: 800, alt: `${room.name} New Taj Palace Hotel Lahore` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${room.name} | New Taj Palace Hotel Lahore`,
+      description: room.short_desc,
+      images: [imageUrl],
+    },
   };
 }
 
@@ -56,8 +74,44 @@ export default async function RoomDetailPage({ params }: RoomPageProps) {
     notFound();
   }
 
+  const roomSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'HotelRoom',
+    name: room.name,
+    description: room.description || room.short_desc,
+    bed: room.bed_type,
+    occupancy: {
+      '@type': 'QuantitativeValue',
+      maxValue: (room.max_adults || 2) + (room.max_children || 0),
+      unitText: 'guests'
+    },
+    offers: {
+      '@type': 'Offer',
+      price: room.base_price,
+      priceCurrency: 'PKR',
+      availability: 'https://schema.org/InStock',
+      url: `https://newtajpalace.com/rooms/${slug}`
+    },
+    amenityFeature: (room.amenities || []).map((a: string) => ({
+      '@type': 'LocationFeatureSpecification',
+      name: a,
+      value: true
+    }))
+  };
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://newtajpalace.com/' },
+      { '@type': 'ListItem', position: 2, name: 'Rooms & Suites', item: 'https://newtajpalace.com/rooms/' },
+      { '@type': 'ListItem', position: 3, name: room.name, item: `https://newtajpalace.com/rooms/${slug}/` }
+    ]
+  };
+
   return (
     <div className="pt-28 sm:pt-36 pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <JsonLd data={[roomSchema, breadcrumbSchema]} />
       {/* Breadcrumb Navigation */}
       <div className="mb-6 flex items-center space-x-2 text-xs font-semibold text-neutral-500">
         <Link href="/" className="hover:text-gold-600 transition-colors">Home</Link>

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Google Hotel Center & Google Maps Hotel List Feed
+  Property: New Taj Palace Hotel, Lahore, Pakistan
+  Feed URL: https://newtajpalace.com/hotel-feed.xml
+-->
+<listings>
+  <language>en</language>
+  <listing>
+    <id>newtajpalace-lahore</id>
+    <name>New Taj Palace Hotel</name>
+    <address format="simple">
+      <component name="addr1">Main Bund Road, Near Rahber &amp; Bilal Travels, Opposite City Bus Terminal, Dholanwal</component>
+      <component name="city">Lahore</component>
+      <component name="province">Punjab</component>
+      <component name="postal_code">54000</component>
+      <component name="country">PK</component>
+    </address>
+    <country>PK</country>
+    <latitude>31.5497</latitude>
+    <longitude>74.2882</longitude>
+    <phone type="main">+923224845461</phone>
+    <phone type="booking">+923224845461</phone>
+    <category>hotel</category>
+    <website>https://newtajpalace.com/</website>
+    <booking_url>https://newtajpalace.com/book/</booking_url>
+    <image_url>https://newtajpalace.com/images/rooms/room-2.webp</image_url>
+    <description>New Taj Palace Hotel offers comfortable and affordable accommodation on Bund Road, Lahore. Opposite the City Bus Terminal and near Rahber &amp; Bilal Travels. Features inverter AC, free high-speed Wi-Fi, 24/7 room service, secure on-site parking, and private bathrooms.</description>
+    <amenities>
+      <amenity>wifi</amenity>
+      <amenity>air_conditioning</amenity>
+      <amenity>parking</amenity>
+      <amenity>room_service</amenity>
+      <amenity>front_desk_24hr</amenity>
+      <amenity>private_bathroom</amenity>
+      <amenity>housekeeping</amenity>
+      <amenity>heating</amenity>
+    </amenities>
+    <rooms>
+      <room>
+        <id>executive-suite</id>
+        <name>Executive Suite</name>
+        <capacity>3</capacity>
+        <bed_type>King Bed + Lounge</bed_type>
+        <price currency="PKR">8500</price>
+        <url>https://newtajpalace.com/rooms/executive-suite/</url>
+      </room>
+      <room>
+        <id>deluxe-king-room</id>
+        <name>Deluxe King Room</name>
+        <capacity>2</capacity>
+        <bed_type>King Bed</bed_type>
+        <price currency="PKR">6500</price>
+        <url>https://newtajpalace.com/rooms/deluxe-king-room/</url>
+      </room>
+      <room>
+        <id>family-quad-suite</id>
+        <name>Family Quad Suite</name>
+        <capacity>5</capacity>
+        <bed_type>Two Queen Beds</bed_type>
+        <price currency="PKR">11500</price>
+        <url>https://newtajpalace.com/rooms/family-quad-suite/</url>
+      </room>
+      <room>
+        <id>standard-double-room</id>
+        <name>Standard Double Room</name>
+        <capacity>2</capacity>
+        <bed_type>Double Bed</bed_type>
+        <price currency="PKR">5000</price>
+        <url>https://newtajpalace.com/rooms/standard-double-room/</url>
+      </room>
+      <room>
+        <id>junior-executive-suite</id>
+        <name>Junior Executive Suite</name>
+        <capacity>2</capacity>
+        <bed_type>Queen Bed</bed_type>
+        <price currency="PKR">7200</price>
+        <url>https://newtajpalace.com/rooms/junior-executive-suite/</url>
+      </room>
+      <room>
+        <id>triple-bed-room</id>
+        <name>Triple Bed Room</name>
+        <capacity>3</capacity>
+        <bed_type>Three Single Beds</bed_type>
+        <price currency="PKR">7800</price>
+        <url>https://newtajpalace.com/rooms/triple-bed-room/</url>
+      </room>
+      <room>
+        <id>business-solo-room</id>
+        <name>Business Solo Room</name>
+        <capacity>1</capacity>
+        <bed_type>Single Bed</bed_type>
+        <price currency="PKR">4200</price>
+        <url>https://newtajpalace.com/rooms/business-solo-room/</url>
+      </room>
+      <room>
+        <id>master-presidential-suite</id>
+        <name>Master Presidential Suite</name>
+        <capacity>4</capacity>
+        <bed_type>Super King + Executive Lounge</bed_type>
+        <price currency="PKR">14500</price>
+        <url>https://newtajpalace.com/rooms/master-presidential-suite/</url>
+      </room>
+    </rooms>
+  </listing>
+</listings>

@@ -4,8 +4,17 @@ import { ShieldCheck, MapPin, Sparkles, HeartHandshake, Phone, MessageSquare, Cl
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'About Us | New Taj Palace Hotel Lahore',
-  description: 'Learn about New Taj Palace Hotel, Lahore. Budget-friendly, comfortable family and business accommodation located on Bund Road near Rahber Travels.',
+  title: 'About Us | New Taj Palace Hotel Bund Road Lahore',
+  description: 'Learn about New Taj Palace Hotel Lahore. Comfortable, budget-friendly family and business accommodation on Main Bund Road, opposite City Bus Terminal and near Rahber Travels.',
+  alternates: {
+    canonical: 'https://newtajpalace.com/about',
+  },
+  openGraph: {
+    title: 'About New Taj Palace Hotel | Bund Road Lahore',
+    description: 'Discover New Taj Palace Hotel, Lahore. Premium comfort, clean rooms, free Wi-Fi, and 24/7 hospitality opposite City Bus Terminal.',
+    url: 'https://newtajpalace.com/about',
+    images: [{ url: '/images/rooms/room-2.webp', width: 1200, height: 800, alt: 'About New Taj Palace Hotel Lahore' }],
+  },
 };
 
 export default function AboutPage() {

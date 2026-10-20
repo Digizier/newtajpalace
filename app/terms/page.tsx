@@ -3,6 +3,10 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions | New Taj Palace Hotel Lahore',
+  description: 'Read the terms of service, guest policies, CNIC requirements, and reservation guidelines for New Taj Palace Hotel, Bund Road, Lahore.',
+  alternates: {
+    canonical: 'https://newtajpalace.com/terms',
+  },
 };
 
 export default function TermsPage() {

@@ -4,8 +4,11 @@ import { ShieldAlert, CheckCircle2, Clock, Calendar, Phone, MessageSquare } from
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Cancellation & Refund Policy | New Taj Palace Hotel',
-  description: 'Understand the booking cancellation, refund, modification, and check-in terms at New Taj Palace Hotel Lahore.',
+  title: 'Cancellation & Refund Policy | New Taj Palace Hotel Lahore',
+  description: 'Understand the booking cancellation, refund, modification, and check-in terms at New Taj Palace Hotel Lahore on Bund Road.',
+  alternates: {
+    canonical: 'https://newtajpalace.com/cancellation-policy',
+  },
 };
 
 export default function CancellationPolicyPage() {
